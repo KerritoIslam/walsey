@@ -1,0 +1,22 @@
+name: ble_probe
+description: Read-only BLE discovery/connection probe for Walsey LED controllers. Sends NO protocol frames.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.3.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  bluetooth_low_energy: ^6.2.1   # 6.2.1 is the version whose API docs were read
+  device_info_plus: ^11.5.0
+  permission_handler: ^12.0.1
+  walsey_led_core:
+    path: ../../walsey_led_core
+
+flutter:
+  uses-material-design: true

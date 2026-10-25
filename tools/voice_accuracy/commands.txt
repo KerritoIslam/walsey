@@ -1,0 +1,41 @@
+# Repeatable speech-recognition test set: one LED command per line.
+#
+# These lines are the *expected* sentences. tools/voice_accuracy/make_tts_corpus.ps1
+# speaks each line with the installed Windows text-to-speech voices and writes
+# 16 kHz mono PCM16 WAV files next to a manifest; bin/voice_accuracy.dart then
+# compares the raw Vosk transcript with these exact strings.
+#
+# This is synthetic speech, not human recordings: useful for a deterministic,
+# repeatable regression baseline, not a substitute for the on-device checklist.
+#
+# Keep the vocabulary inside what the Stage 1 parser accepts. 30 entries.
+turn the lights on
+turn the lights off
+switch on the lights
+switch off the lights
+walsey turn the lights on
+walsey turn the lights off
+make the lights blue
+make the lights red
+make the lights green
+make the lights purple
+make the lights pink
+make the lights yellow
+set brightness to 50 percent
+set brightness to 100 percent
+set brightness to 20 percent
+set the brightness to 75 percent
+increase the brightness
+decrease the brightness
+make the lights brighter
+make the lights dimmer
+activate effect 5
+activate effect 12
+turn on effect 3
+set effect 10
+walsey set brightness to 60 percent
+walsey make the lights cyan
+walsey activate effect 7
+turn the lights white
+set brightness to 0 percent
+make the lights orange

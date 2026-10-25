@@ -1,0 +1,21 @@
+name: walsey_led_ble
+description: Stage 2 BLE transport for Walsey LED controllers. Implements the core LedTransport over bluetooth_low_energy; writes 9-byte LEDDMX frames only.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.3.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  bluetooth_low_energy: ^6.2.1
+  device_info_plus: ^11.5.0
+  permission_handler: ^12.0.1
+  walsey_led_core:
+    path: ../walsey_led_core
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

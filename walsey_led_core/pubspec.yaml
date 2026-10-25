@@ -1,0 +1,14 @@
+name: walsey_led_core
+description: Pure Dart core for controlling LEDDMX-family Bluetooth LED controllers (domain, protocol frames, scenes). No Flutter, no BLE plugin.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.3.0
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.33.0
+
+# Dev dependencies are intentionally not pinned: they could not be resolved in
+# the authoring sandbox. Add them with:
+#   dart pub add --dev test lints

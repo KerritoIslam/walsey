@@ -1,0 +1,13 @@
+name: walsey_voice_core
+description: >-
+  Pure Dart voice-command understanding for Walsey (Stage 1: text to validated
+  intent). No microphone, speech recognition, Flutter, BLE or network.
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.3.0
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.33.0
