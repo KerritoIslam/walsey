@@ -1,0 +1,21 @@
+Protocol facts (UUIDs, frame layouts, handshake, effect id ranges) were derived
+from the documentation and driver source of LED Union:
+
+  https://github.com/chameleonbr/LED_UNION   (MIT License)
+  Copyright (c) 2026 LED Union contributors
+
+No source code from LED Union is copied; frame encoders in this repository are
+independent Dart implementations of the documented byte layouts. The MIT notice
+above is reproduced out of respect for that licence and in case any future
+change adapts code directly (in which case the full MIT text must be included).
+
+Speech recognition (voice Stage 2) uses Vosk by Alpha Cephei:
+
+  https://github.com/alphacep/vosk-api   (Apache License 2.0)
+  https://alphacephei.com/vosk/models    (Apache License 2.0)
+
+Vosk is not copied into this repository: Android builds resolve the
+com.alphacephei:vosk-android AAR from Maven Central, Windows builds require the
+official release DLLs fetched by tools/fetch_vosk_windows.ps1, and language
+models are downloaded explicitly by the user. Those artifacts are distributed
+under the Apache License 2.0, and their licence files ship with them.
