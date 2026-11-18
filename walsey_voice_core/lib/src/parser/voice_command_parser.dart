@@ -4,6 +4,7 @@ import '../domain/voice_parameters.dart';
 import '../domain/voice_result.dart';
 import '../registry/command_registry.dart';
 import 'normalization.dart';
+import 'paraphrase.dart';
 
 /// Deterministic, offline text-to-command parser.
 ///
@@ -31,7 +32,10 @@ final class VoiceCommandParser {
       );
     }
 
-    final tokens = _stripWakeWord(normalized.tokens);
+    // Everyday phrasings ("could you switch the lighting on", "I want the
+    // lights enabled") are rewritten into the canonical vocabulary this parser
+    // validates. The mapping is literal and cannot add an action.
+    final tokens = normalizeParaphrases(_stripWakeWord(normalized.tokens));
     if (tokens.isEmpty) {
       return _failure(
         input,
@@ -47,6 +51,18 @@ final class VoiceCommandParser {
         VoiceFailureKind.unsupported,
         'Negated or hypothetical requests are not turned into actions. '
         'Nothing was executed.',
+      );
+    }
+
+    // Status questions are recognized so the app can answer honestly ("the
+    // protocol has no state read-back"). This runs before the generic question
+    // guard and is deliberately narrow: a real action verb disqualifies it.
+    if (_isStatusQuestion(tokens)) {
+      return _command(
+        input,
+        tokens,
+        VoiceIntent.queryStatus,
+        const NoParameters(),
       );
     }
 
@@ -135,10 +151,12 @@ final class VoiceCommandParser {
     }
 
     // Absolute brightness: a number plus a brightness/light/percent context.
+    // "half brightness" / "maximum brightness" are qualifiers, not numbers.
     final brightnessContext = hasBrightnessNoun ||
         (hasLight && hasPercent) ||
         (hasLight && hasSettingVerb);
-    if (brightnessContext && numbers.isNotEmpty) {
+    if (brightnessContext &&
+        (numbers.isNotEmpty || _brightnessQualifier(tokens) != null)) {
       candidates.add(VoiceIntent.setBrightness);
     }
 
@@ -205,6 +223,8 @@ final class VoiceCommandParser {
       VoiceIntent.setColor => _buildColor(input, tokens, colors),
       VoiceIntent.setBrightness => _buildBrightness(input, tokens, numbers),
       VoiceIntent.applyEffect => _buildEffect(input, tokens, numbers),
+      VoiceIntent.queryStatus =>
+        _command(input, tokens, intent, const NoParameters()),
     };
   }
 
@@ -334,11 +354,22 @@ final class VoiceCommandParser {
     var refs = _numbersNear(tokens, numbers, _brightnessValueKeywords);
     if (refs.isEmpty) refs = numbers;
     if (refs.isEmpty) {
-      return _failure(
+      final qualifier = _brightnessQualifier(tokens);
+      if (qualifier == null) {
+        return _failure(
+          input,
+          VoiceFailureKind.missingParameter,
+          'Brightness needs a value between 0 and 100 percent.',
+          intent: VoiceIntent.setBrightness,
+        );
+      }
+      // A qualifier is an absolute percentage from the documented table
+      // (`_brightnessQualifiers`); it is never clamped or interpolated.
+      return _command(
         input,
-        VoiceFailureKind.missingParameter,
-        'Brightness needs a value between 0 and 100 percent.',
-        intent: VoiceIntent.setBrightness,
+        tokens,
+        VoiceIntent.setBrightness,
+        BrightnessParameters(VoiceBrightness(qualifier)),
       );
     }
     if (refs.map((r) => r.value).toSet().length > 1) {
@@ -505,6 +536,21 @@ const _questionWords = {
   'how',
   'which',
   'tell',
+  // Interrogative openers. Without these an unpunctuated question such as
+  // "should I turn the lights on" reaches the power intent and would be
+  // executed. Stage 1 deliberately refuses questions; a request phrased as a
+  // question must be rephrased as a command.
+  //
+  // "can/could/would you ..." is deliberately NOT here: the project treats it
+  // as a polite request (see parser_power_test), so it stays executable.
+  'should',
+  'do',
+  'does',
+  'did',
+  'is',
+  'are',
+  'am',
+  'may',
 };
 
 /// Actions from future domains. Mentioning one is refused instead of being
@@ -527,7 +573,7 @@ const _otherDevices = {
 const _powerVerbs = {'turn', 'switch', 'power', 'flip', 'shut'};
 
 const _settingVerbs = {
-  'turn', 'switch', 'set', 'change', 'make', 'put', 'paint', 'adjust', //
+  'turn', 'switch', 'set', 'change', 'make', 'put', 'paint', 'adjust', 'give', //
   'dial', 'activate', 'apply', 'start', 'enable', 'disable', 'power',
   'dim', 'brighten', 'darken', 'raise', 'lower', 'increase', 'decrease',
   'boost', 'reduce',
@@ -555,6 +601,26 @@ const _decreaseWords = {
 };
 
 const _brightnessNouns = {'brightness', 'bright'};
+
+/// Absolute brightness words. These are fixed, documented percentages, not a
+/// guess: the LED API takes 0..100 and the controller scales with floor.
+const Map<String, int> _brightnessQualifiers = {
+  'half': 50,
+  'quarter': 25,
+  'full': 100,
+  'maximum': 100,
+  'max': 100,
+  'minimum': 0,
+  'min': 0,
+};
+
+int? _brightnessQualifier(List<String> tokens) {
+  for (final token in tokens) {
+    final value = _brightnessQualifiers[token];
+    if (value != null) return value;
+  }
+  return null;
+}
 
 /// Keywords that anchor a brightness number. `percent` is included so
 /// "50 and 60 percent" exposes both candidates instead of silently picking the
@@ -616,6 +682,39 @@ final class _NumberRef {
 
 bool _anyOf(Set<String> words, List<String> tokens) =>
     tokens.any(words.contains);
+
+/// Whether [tokens] ask about the current state rather than requesting a
+/// change.
+///
+/// Narrow on purpose: a light noun plus a copula and an on/off word
+/// ("are the lights on"), or a what/which/how question about colour or
+/// brightness. Any action verb disqualifies the sentence, so
+/// "should I turn the lights on" stays a refused question.
+bool _isStatusQuestion(List<String> tokens) {
+  final hasSubject = _anyOf(_lightNouns, tokens) ||
+      _anyOf(_brightnessNouns, tokens) ||
+      _anyOf(_colorNouns, tokens);
+  if (!hasSubject) return false;
+  final hasAction = _anyOf(_settingVerbs, tokens) ||
+      _anyOf(_powerVerbs, tokens) ||
+      _anyOf(_relativeEffectWords, tokens);
+  if (hasAction) return false;
+
+  final hasStateWord = tokens.contains('on') || tokens.contains('off');
+  // Interrogative shape is required: "are the lights on" is a question,
+  // "the lights are on" is a statement and stays refused.
+  final startsWithCopula = _copula.contains(tokens.first) && hasStateWord;
+  if (startsWithCopula) return true;
+
+  final asksWord = tokens.contains('what') ||
+      tokens.contains('which') ||
+      tokens.contains('how');
+  final asksValue = _anyOf(_brightnessNouns, tokens) ||
+      _anyOf(_colorNouns, tokens);
+  return asksWord && asksValue;
+}
+
+const _copula = {'is', 'are', 'am'};
 
 List<String> _stripWakeWord(List<String> tokens) {
   var start = 0;

@@ -269,6 +269,14 @@ class SessionDiagnostics extends ChangeNotifier {
         '${first.inMilliseconds} ms after session start',
       ));
     }
+    final capture = _captureWallTime;
+    final finalize = _finalizeWallTime;
+    if (capture != null && finalize != null && finalize > capture) {
+      rows.add((
+        'Recognition time',
+        '${(finalize - capture).inMilliseconds} ms from stop to transcript',
+      ));
+    }
     rows.add(('Audio after last partial', '$_bytesSincePartial B'));
     return rows;
   }

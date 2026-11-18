@@ -1,0 +1,68 @@
+# Wake-phrase benchmark corpus for bin/wake_accuracy.dart.
+#
+# Same convention as commands.txt: a leading "!" marks a line that must NOT
+# trigger. Positives are the wake phrase alone or followed by a command.
+#
+# Pronunciation variety is produced by spelling: SAPI says "wolsey", "walsy"
+# and "wallsey" differently from "walsey", which exercises the matcher's
+# canonical forms. This is still synthetic speech; human accents and room noise
+# remain unmeasured until recorded audio exists.
+#
+# Generate with:
+#   powershell -File tools/voice_accuracy/make_tts_corpus.ps1 `
+#     -CommandFile tools/voice_accuracy/wake.txt `
+#     -OutputDirectory %TEMP%\walsey_wake_corpus
+# Then:
+#   dart run bin/wake_accuracy.dart --model <vosk model> --corpus <that folder>
+
+# --- positives: the phrase must trigger ---
+walsey
+hey walsey
+okay walsey
+walsey turn the lights on
+walsey turn the lights off
+walsey make the lights blue
+walsey set brightness to 50 percent
+hey walsey make the lights red
+walsey activate effect 5
+walsey are you there
+walsey please turn on the lights
+okay walsey make the lights green
+walsey set the color to purple
+wolsey
+walsy
+wallsey
+walsey turn off the lights now
+hey walsey set brightness to 20 percent
+
+# --- negatives: ordinary conversation must never trigger ---
+!well see you later
+!the city lights look nice
+!I will say it again
+!while she was talking
+!the wall is blue
+!we saw the city lights
+!well say hello for me
+!she will see the lights
+!I will see you tomorrow
+!the city is far away
+!we will say it slowly
+!while she reads
+!what a lovely wall
+!that was silly
+!will see what happens
+!the seal is grey
+!we sell lights
+!she sells lamps
+!well said
+!silly question
+!the ceiling light
+!willy won the race
+!the will is ready
+!we saw a wall
+!city lights are bright
+!see you later
+!well done
+!the silo is tall
+!the wolf is grey
+!whiskey

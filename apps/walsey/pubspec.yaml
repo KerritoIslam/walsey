@@ -36,6 +36,12 @@ dependencies:
     path: ../../walsey_led_core
   walsey_led_ble:
     path: ../../walsey_led_ble
+  walsey_voice_core:
+    path: ../../walsey_voice_core
+  walsey_voice_speech:
+    path: ../../walsey_voice_speech
+  shared_preferences: ^2.5.3
+  flutter_tts: ^4.2.5
 
 dev_dependencies:
   flutter_test:
@@ -58,6 +64,20 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Walsey typography: Inter 4.0 desktop static weights
+  # (SIL OFL 1.1 — see assets/fonts/LICENSE-Inter.txt).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.otf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.otf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:

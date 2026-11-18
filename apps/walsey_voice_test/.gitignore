@@ -50,3 +50,13 @@ app.*.map.json
 # Stage 2 Windows: native Vosk DLLs fetched by tools/fetch_vosk_windows.ps1.
 # Third-party binaries are not committed; run the script to install them.
 /windows/vosk/
+
+# Stage 2 Windows: whisper.cpp DLLs and the ggml-base.en model, fetched by
+# tools/fetch_whisper_windows.ps1. Third-party binaries and the 141 MB model
+# are not committed; the app's model manager can also install the model.
+/windows/whisper/
+
+# Stage 2 Android: whisper.cpp .so files built by tools/build_whisper_android.ps1.
+# Third-party binaries are not committed; run the script to build them.
+/android/app/src/main/jniLibs-whisper/
+/android/app/.cxx/

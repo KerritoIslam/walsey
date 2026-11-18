@@ -6,132 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:walsey_voice_core/walsey_voice_core.dart';
 import 'package:walsey_voice_speech/walsey_voice_speech.dart';
 
-class FakeEngine implements SpeechEngine {
-  final StreamController<SpeechEngineEvent> _events =
-      StreamController<SpeechEngineEvent>.broadcast();
-
-  String? loadedPath;
-  Object? loadError;
-  String? finalText = 'set brightness to 50 percent';
-  int sessions = 0;
-  int resets = 0;
-  bool disposed = false;
-  List<String>? requestedGrammar;
-  final List<Uint8List> chunks = [];
-
-  @override
-  Stream<SpeechEngineEvent> get events => _events.stream;
-
-  @override
-  Future<void> loadModel(String modelPath) async {
-    final error = loadError;
-    if (error != null) {
-      throw error;
-    }
-    loadedPath = modelPath;
-  }
-
-  @override
-  Future<void> beginSession({
-    required int sampleRate,
-    List<String>? grammar,
-  }) async {
-    sessions++;
-    requestedGrammar = grammar;
-  }
-
-  @override
-  void accept(Uint8List pcm) => chunks.add(pcm);
-
-  @override
-  Future<String?> finish() async => finalText;
-
-  @override
-  Future<void> reset() async {
-    resets++;
-    finalText = null;
-  }
-
-  @override
-  Future<void> dispose() async {
-    disposed = true;
-    await _events.close();
-  }
-
-  void emit(SpeechEngineEvent event) {
-    if (!_events.isClosed) {
-      _events.add(event);
-    }
-  }
-}
-
-class FakeCapture implements AudioCapture {
-  final StreamController<Uint8List> _chunks =
-      StreamController<Uint8List>.broadcast();
-
-  bool permission = true;
-  int starts = 0;
-  int stops = 0;
-  int disposals = 0;
-  int? requestedSampleRate;
-
-  @override
-  Future<bool> hasPermission() async => permission;
-
-  @override
-  Future<Stream<Uint8List>> startStream({required int sampleRate}) async {
-    starts++;
-    requestedSampleRate = sampleRate;
-    return _chunks.stream;
-  }
-
-  @override
-  Future<void> stop() async {
-    stops++;
-  }
-
-  @override
-  Future<void> dispose() async {
-    disposals++;
-    await _chunks.close();
-  }
-
-  void add(Uint8List chunk) => _chunks.add(chunk);
-}
-
-/// Behaves like a real recorder on shutdown: the platform emits one final buffer
-/// inside `stop()` and only then closes the stream.
-class TailCapture implements AudioCapture {
-  final StreamController<Uint8List> _chunks = StreamController<Uint8List>();
-  bool started = false;
-
-  @override
-  Future<bool> hasPermission() async => true;
-
-  @override
-  Future<Stream<Uint8List>> startStream({required int sampleRate}) async {
-    started = true;
-    return _chunks.stream;
-  }
-
-  @override
-  Future<void> stop() async {
-    if (!started || _chunks.isClosed) {
-      return;
-    }
-    _chunks.add(Uint8List.fromList(const [7, 7]));
-    await _chunks.close();
-  }
-
-  @override
-  Future<void> dispose() async {
-    if (!_chunks.isClosed) {
-      await _chunks.close();
-    }
-  }
-
-  void add(Uint8List chunk) => _chunks.add(chunk);
-}
+import 'support/fakes.dart';
 
 void main() {
   late Directory tempDirectory;
@@ -286,12 +161,17 @@ void main() {
 
       await recognizer.start();
       await pumpEventQueue();
-      expect(events.single, isA<SpeechSessionStarted>());
+      // SpeechSessionStarted is now deferred until the first audio chunk
+      // arrives (the ~750 ms microphone-open delay on Windows means the event
+      // fires later than startStream() returning). No event is emitted yet.
+      expect(events, isEmpty);
       expect(capture.requestedSampleRate, 16000);
       expect(engine.sessions, 1);
 
       capture.add(Uint8List.fromList(const [0, 1, 0, 2]));
       await pumpEventQueue();
+      // First chunk → SpeechSessionStarted fires, then the chunk reaches Vosk.
+      expect(events.first, isA<SpeechSessionStarted>());
       expect(engine.chunks.single, const [0, 1, 0, 2]);
 
       await recognizer.stop();
@@ -311,6 +191,9 @@ void main() {
       await recognizer.start();
       await pumpEventQueue();
       expect(engine.requestedGrammar, isNull);
+      // Send a chunk so the session is started before stopping.
+      capture.add(Uint8List.fromList(const [0, 0]));
+      await pumpEventQueue();
       await recognizer.stop();
       await pumpEventQueue();
 
@@ -327,6 +210,8 @@ void main() {
         'turn the lights on',
         'turn the lights off',
       ]);
+      capture.add(Uint8List.fromList(const [0, 0]));
+      await pumpEventQueue();
       await constrained.stop();
       await pumpEventQueue();
     });
@@ -401,6 +286,160 @@ void main() {
       capture.add(Uint8List.fromList(const [9, 9]));
       await pumpEventQueue();
       expect(engine.chunks.length, delivered);
+    });
+
+    test('reassembles PCM16 samples split between recorder chunks', () async {
+      await createInstalledModel();
+      await recognizer.start();
+      await pumpEventQueue();
+
+      capture.add(Uint8List.fromList(const [0x34]));
+      capture.add(Uint8List.fromList(const [0x12, 0x78]));
+      capture.add(Uint8List.fromList(const [0x56]));
+      await pumpEventQueue();
+
+      expect(engine.chunks, [
+        [0x34, 0x12],
+        [0x78, 0x56],
+      ]);
+      await recognizer.stop();
+    });
+  });
+
+  group('stop during a pending start', () {
+    test('a release while the recorder opens closes it and reports no speech',
+        () async {
+      await createInstalledModel();
+      final gate = Completer<void>();
+      final gated = GatedCapture(startGate: gate);
+      final gatedRecognizer = VoskSpeechRecognizer(
+        modelStore: store,
+        engine: engine,
+        audioCapture: gated,
+      );
+      addTearDown(gatedRecognizer.dispose);
+      final gatedEvents = <SpeechRecognitionEvent>[];
+      final subscription = gatedRecognizer.events.listen(gatedEvents.add);
+      addTearDown(subscription.cancel);
+
+      final startFuture = gatedRecognizer.start();
+      await pumpEventQueue();
+      expect(gated.startCalls, 1, reason: 'the recorder open is in flight');
+
+      // The user let go before the microphone finished opening.
+      await gatedRecognizer.stop();
+      gate.complete();
+      await startFuture;
+      await pumpEventQueue();
+
+      expect(
+        gated.recording,
+        isFalse,
+        reason: 'the release must not leave the microphone capturing',
+      );
+      expect(
+        gatedEvents.whereType<SpeechFinalTranscript>(),
+        isEmpty,
+        reason: 'a take with no audio cannot produce a transcript',
+      );
+      expect(gatedEvents.last, isA<SpeechNoSpeechDetected>());
+    });
+
+    test('a release before the permission check never opens the microphone',
+        () async {
+      await createInstalledModel();
+      final gate = Completer<void>();
+      final gated = GatedCapture(permissionGate: gate);
+      final gatedRecognizer = VoskSpeechRecognizer(
+        modelStore: store,
+        engine: engine,
+        audioCapture: gated,
+      );
+      addTearDown(gatedRecognizer.dispose);
+      final gatedEvents = <SpeechRecognitionEvent>[];
+      final subscription = gatedRecognizer.events.listen(gatedEvents.add);
+      addTearDown(subscription.cancel);
+
+      final startFuture = gatedRecognizer.start();
+      await pumpEventQueue();
+      expect(gated.permissionChecks, 1, reason: 'the permission check is open');
+
+      await gatedRecognizer.stop();
+      gate.complete();
+      await startFuture;
+      await pumpEventQueue();
+
+      expect(
+        gated.startCalls,
+        0,
+        reason: 'an aborted start must not open the microphone afterwards',
+      );
+      expect(gated.recording, isFalse);
+      expect(gatedEvents.last, isA<SpeechNoSpeechDetected>());
+    });
+
+    test('a recorder that fails to stop is reported, never swallowed',
+        () async {
+      await createInstalledModel();
+      final gated = GatedCapture()..stopError = StateError('recorder busy');
+      final gatedRecognizer = VoskSpeechRecognizer(
+        modelStore: store,
+        engine: engine,
+        audioCapture: gated,
+      );
+      addTearDown(gatedRecognizer.dispose);
+      final gatedEvents = <SpeechRecognitionEvent>[];
+      final subscription = gatedRecognizer.events.listen(gatedEvents.add);
+      addTearDown(subscription.cancel);
+
+      await gatedRecognizer.start();
+      await pumpEventQueue();
+      gated.add(Uint8List.fromList(const [1, 2, 3, 4]));
+      await pumpEventQueue();
+
+      await gatedRecognizer.stop();
+      await pumpEventQueue();
+
+      expect(
+        gatedEvents.whereType<SpeechFinalTranscript>(),
+        isEmpty,
+        reason: 'a failed recorder stop cannot be reported as a clean take',
+      );
+      expect(gatedEvents.last, isA<SpeechSessionFailed>());
+      expect(
+        (gatedEvents.last as SpeechSessionFailed).message,
+        contains('microphone'),
+      );
+    });
+
+    test('a recorder that never acknowledges the stop is bounded', () async {
+      await createInstalledModel();
+      final gated = GatedCapture(stopGate: Completer<void>());
+      final gatedRecognizer = VoskSpeechRecognizer(
+        modelStore: store,
+        engine: engine,
+        audioCapture: gated,
+        captureStopTimeout: const Duration(milliseconds: 50),
+      );
+      addTearDown(gatedRecognizer.dispose);
+      final gatedEvents = <SpeechRecognitionEvent>[];
+      final subscription = gatedRecognizer.events.listen(gatedEvents.add);
+      addTearDown(subscription.cancel);
+
+      await gatedRecognizer.start();
+      await pumpEventQueue();
+      gated.add(Uint8List.fromList(const [1, 2, 3, 4]));
+      await pumpEventQueue();
+
+      // The fake recorder never completes its stop: the session must not hang.
+      await gatedRecognizer.stop().timeout(const Duration(seconds: 5));
+      await pumpEventQueue();
+
+      expect(gatedEvents.whereType<SpeechFinalTranscript>(), isEmpty);
+      expect(gatedEvents.last, isA<SpeechSessionFailed>());
+      final failure = gatedEvents.last as SpeechSessionFailed;
+      expect(failure.kind, SpeechFailureKind.microphoneUnavailable);
+      expect(failure.message, contains('50 ms'));
     });
   });
 

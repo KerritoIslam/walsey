@@ -1,0 +1,48 @@
+# Multi-step / device corpus for bin/voice_accuracy.dart --plan.
+#
+# The app interprets speech with VoicePlanParser, so compound requests and
+# device actions are measured here, not in commands.txt (which stays on the
+# single-command parser for baseline comparability).
+#
+# Same polarity convention: a leading `!` marks a line that must stay rejected.
+# Validate after editing:
+#   dart run bin/check_corpus.dart ../tools/voice_accuracy/commands_plan.txt --plan
+
+# --- compound lighting ---
+turn the lights on and set brightness to 50 percent
+turn the lights on then set brightness to 60 percent
+make the lights blue and set brightness to 20 percent
+turn the lights on and make the lights red
+set brightness to 40 percent and activate effect 5
+turn the lights off and set brightness to 10 percent
+make the lights green then set brightness to 80 percent
+set brightness to 75 percent and activate effect 7
+walsey turn the lights on then make the lights blue
+
+# --- device flows ---
+scan for devices and turn the first one on
+connect to the first device and set the color to blue
+connect to my LED and change it to blue
+connect to LEDDMX-03-6B4A and turn it on
+connect to the last device and turn it on
+scan for devices and connect to the last device
+find available LED devices
+disconnect from the current device
+reconnect to the last connected device
+save this scene
+
+# --- with the wake phrase (stripped before planning) ---
+walsey scan for devices and turn the first one on
+hey walsey connect to the first device and set the color to green
+
+# --- negatives: must NOT become a plan ---
+!apply the scene
+!scan for devices and open the door
+!don't scan for devices
+!turn on the lights and play music
+!connect to the first device and order pizza
+!should I scan for devices
+!should I connect to the first device
+!scan for devices then order pizza
+!turn off the lights and open the door
+!don't connect to the first device

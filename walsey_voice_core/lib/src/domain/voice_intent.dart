@@ -12,6 +12,7 @@ enum VoiceIntent {
   increaseBrightness,
   decreaseBrightness,
   applyEffect,
+  queryStatus,
 }
 
 extension VoiceIntentLabel on VoiceIntent {
@@ -24,5 +25,6 @@ extension VoiceIntentLabel on VoiceIntent {
         VoiceIntent.increaseBrightness => 'Increase brightness',
         VoiceIntent.decreaseBrightness => 'Decrease brightness',
         VoiceIntent.applyEffect => 'Apply effect',
+        VoiceIntent.queryStatus => 'Query state',
       };
 }

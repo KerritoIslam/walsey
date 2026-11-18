@@ -28,7 +28,8 @@ class WalseyVoiceTestApp extends StatelessWidget {
     this.diagnostics,
   });
 
-  /// Optional fakes for widget tests; production constructs the Vosk adapter.
+  /// Optional fakes for widget tests; production constructs the Whisper
+/// adapter.
   final SpeechRecognizer? recognizer;
   final ModelStore? modelStore;
   final VoiceCommandParser? parser;

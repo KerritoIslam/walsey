@@ -105,6 +105,13 @@ final class CommandRegistry {
           description: 'Apply a documented built-in effect id.',
           example: 'Walsey, activate effect 5.',
         ),
+        VoiceActionSpec(
+          intent: VoiceIntent.queryStatus,
+          domain: VoiceDomain.led,
+          description:
+              'Ask about the current state (never answered from memory).',
+          example: 'Walsey, are the lights on?',
+        ),
       ]);
 
   final Map<VoiceIntent, VoiceActionSpec> _actions;

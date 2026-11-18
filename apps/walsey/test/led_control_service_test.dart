@@ -136,9 +136,15 @@ void main() {
     expect(outcome.status, PasswordStatus.allSameDigits);
     expect(
       logs.any((line) =>
-          line.contains('PASSWORD REPLY: allSameDigits') &&
+          line.contains('HARDWARE RESPONSE: PASSWORD REPLY: allSameDigits') &&
           line.contains('only protocol response')),
       isTrue,
+    );
+    // The write itself is logged separately and never as a reply.
+    expect(
+      logs.any((line) =>
+          line.contains('BLE WRITE OK') && line.contains('HARDWARE RESPONSE')),
+      isFalse,
     );
   });
 }

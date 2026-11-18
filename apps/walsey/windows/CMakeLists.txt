@@ -57,6 +57,30 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# --- MSVC 14.51 /await workaround -------------------------------------------
+# bluetooth_low_energy_windows 6.2.1 and permission_handler_windows 0.2.x
+# compile C++/WinRT coroutines as C++17 with the legacy /await switch. MSVC
+# 14.51 rejects /await with STL1011 ("The /await compiler option ... is
+# deprecated"). Coroutines are native in C++20, so these two plugin targets are
+# rebuilt with /std:c++20 and without /await. The patch lives in this app: the
+# pub cache stays untouched and Android builds are unaffected. Remove it once
+# both plugins raise their own language standard.
+foreach(_walsey_await_target
+    bluetooth_low_energy_windows_plugin
+    permission_handler_windows_plugin)
+  if(TARGET ${_walsey_await_target})
+    get_property(_walsey_options TARGET ${_walsey_await_target}
+      PROPERTY COMPILE_OPTIONS)
+    list(FILTER _walsey_options EXCLUDE REGEX "^/await$")
+    set_property(TARGET ${_walsey_await_target}
+      PROPERTY COMPILE_OPTIONS "${_walsey_options}" "/std:c++20")
+    set_target_properties(${_walsey_await_target} PROPERTIES
+      CXX_STANDARD 20
+      CXX_STANDARD_REQUIRED ON
+      CXX_EXTENSIONS OFF)
+  endif()
+endforeach()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

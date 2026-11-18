@@ -38,3 +38,36 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+set(VOSK_WINDOWS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../vosk")
+if(EXISTS "${VOSK_WINDOWS_DIR}/libvosk.dll")
+  foreach(VOSK_DLL libvosk.dll libstdc++-6.dll libgcc_s_seh-1.dll libwinpthread-1.dll)
+    if(EXISTS "${VOSK_WINDOWS_DIR}/${VOSK_DLL}")
+      add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${VOSK_WINDOWS_DIR}/${VOSK_DLL}"
+          "$<TARGET_FILE_DIR:${BINARY_NAME}>/${VOSK_DLL}")
+    endif()
+  endforeach()
+endif()
+
+set(WHISPER_WINDOWS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../whisper")
+if(EXISTS "${WHISPER_WINDOWS_DIR}/whisper.dll")
+  file(GLOB WHISPER_CPU_DLLS "${WHISPER_WINDOWS_DIR}/ggml-cpu-*.dll")
+  foreach(WHISPER_DLL
+      "${WHISPER_WINDOWS_DIR}/whisper.dll"
+      "${WHISPER_WINDOWS_DIR}/ggml.dll"
+      "${WHISPER_WINDOWS_DIR}/ggml-base.dll"
+      ${WHISPER_CPU_DLLS})
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${WHISPER_DLL}" "$<TARGET_FILE_DIR:${BINARY_NAME}>")
+  endforeach()
+  if(EXISTS "${WHISPER_WINDOWS_DIR}/ggml-base.en.bin")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${BINARY_NAME}>/models"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${WHISPER_WINDOWS_DIR}/ggml-base.en.bin"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/models/ggml-base.en.bin")
+  endif()
+endif()

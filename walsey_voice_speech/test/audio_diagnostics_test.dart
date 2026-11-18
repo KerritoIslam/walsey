@@ -38,6 +38,27 @@ void main() {
       expect(view.getUint32(40, Endian.little), 8);
     });
 
+    group('PCM16 stream assembly', () {
+      test('joins a sample split across chunks without changing bytes', () {
+        final assembler = Pcm16Assembler();
+
+        expect(assembler.add(Uint8List.fromList([0x34])), isEmpty);
+        expect(
+          assembler.add(Uint8List.fromList([0x12, 0x78])),
+          [0x34, 0x12],
+        );
+        expect(assembler.add(Uint8List.fromList([0x56])), [0x78, 0x56]);
+        assembler.finish();
+      });
+
+      test('rejects a truncated final sample', () {
+        final assembler = Pcm16Assembler();
+        assembler.add(Uint8List.fromList([0x01]));
+
+        expect(assembler.finish, throwsFormatException);
+      });
+    });
+
     test('round-trips through the decoder', () {
       final source = pcm16([1234, -1234, 32767, -32768]);
       final decoded = decodePcm16Wav(encodePcm16Wav(source, sampleRate: 16000));

@@ -84,7 +84,7 @@ void main() {
   });
 
   test('a non-numeric brightness value is invalid', () {
-    for (final phrase in ['set brightness to high', 'set brightness to max']) {
+    for (final phrase in ['set brightness to high', 'set brightness to loud']) {
       final failure = failureFor(phrase);
       expect(
         failure.kind,
@@ -93,6 +93,11 @@ void main() {
       );
       expect(failure.intent, VoiceIntent.setBrightness, reason: phrase);
     }
+  });
+
+  test('documented qualifiers are fixed percentages', () {
+    final max = commandFor('set brightness to max');
+    expect((max.parameters as BrightnessParameters).brightness.percent, 100);
   });
 
   test('two different brightness values are ambiguous', () {

@@ -26,14 +26,19 @@ final class SpeechEngineError extends SpeechEngineEvent {
   final String message;
 }
 
-/// Low-level, engine-shaped interface used by [VoskSpeechRecognizer].
+/// Low-level, engine-shaped interface used by the recognizers in this
+/// package ([VoskSpeechRecognizer], [WhisperSpeechRecognizer]).
 ///
-/// Kept separate from the voice-core `SpeechRecognizer` port so the recognizer
+/// Kept separate from the voice-core `SpeechRecognizer` port so a recognizer
 /// can be unit-tested with an in-memory engine: no microphone, no native
 /// library and no isolate are needed for that.
 ///
 /// Implementations must serialise their own calls; the recognizer never feeds
 /// audio concurrently with [finish] or [reset].
+///
+/// Engines differ in streaming behaviour: Vosk decodes incrementally and
+/// emits partials while audio arrives; Whisper decodes the whole utterance
+/// in one pass inside [finish] and may legitimately emit no partials at all.
 abstract interface class SpeechEngine {
   /// Updates emitted while audio is being fed.
   Stream<SpeechEngineEvent> get events;
@@ -43,8 +48,10 @@ abstract interface class SpeechEngine {
 
   /// Creates a fresh recognizer for one utterance.
   ///
-  /// [grammar] restricts decoding to the given phrases when the engine and the
-  /// loaded model support constrained grammars. `null` means unconstrained.
+  /// [grammar] restricts decoding to the given phrases when the engine and
+  /// the loaded model support constrained grammars. `null` means
+  /// unconstrained. An engine that cannot constrain decoding ignores the
+  /// list.
   Future<void> beginSession({required int sampleRate, List<String>? grammar});
 
   /// Feeds 16-bit little-endian mono PCM at the session sample rate.

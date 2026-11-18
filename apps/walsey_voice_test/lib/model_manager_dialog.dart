@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:walsey_voice_speech/walsey_voice_speech.dart';
 
-/// Explicit, user-triggered language-model setup.
+/// Explicit, user-triggered model setup.
 ///
 /// Nothing here runs at startup and nothing is downloaded without pressing
 /// "Install". The dialog reports the download size, checksum, licence and the
-/// storage folder so the setup is never a hidden network side effect.
+/// storage folder so the setup is never a hidden network side effect. The
+/// primary engine's model comes first; the Vosk fallback models stay listed
+/// for comparison and rollback but are never required by the Whisper flow.
 class ModelManagerDialog extends StatefulWidget {
   const ModelManagerDialog({
     super.key,
@@ -135,10 +137,10 @@ class _ModelManagerDialogState extends State<ModelManagerDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Vosk runs entirely on this device. A model is required before '
-                'the microphone can be used, so each download is explicit and '
-                'one-time. Nothing is downloaded at startup and no cloud '
-                'service is ever used.',
+                'Recognition runs entirely on this device. A model is '
+                'required before the microphone can be used, so each download '
+                'is explicit and one-time. Nothing is downloaded at startup '
+                'and no cloud service is ever used.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 8),
@@ -231,6 +233,17 @@ class _ModelCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                Chip(
+                  label: Text(
+                    switch (model.kind) {
+                      ModelKind.whisperGgml => 'Whisper · primary',
+                      ModelKind.voskArchive => 'Vosk · fallback',
+                    },
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  backgroundColor: colors.surfaceContainerHighest,
+                ),
+                const SizedBox(width: 8),
                 Chip(
                   label: Text(installed ? 'Installed' : 'Not installed'),
                   backgroundColor: installed

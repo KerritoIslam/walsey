@@ -75,3 +75,50 @@ else()
     "will report a native-library error and typed commands will still work. "
     "Run tools/fetch_vosk_windows.ps1 to enable it.")
 endif()
+
+# Whisper (whisper.cpp) native libraries — the primary Stage 2 engine.
+#
+# Same pattern as the Vosk block: the binaries are not committed. Run once:
+#   powershell -ExecutionPolicy Bypass -File tools/fetch_whisper_windows.ps1
+# It fetches the official whisper.cpp b5454 build into windows/whisper/ and
+# copies the ggml-base.en model there as well. The build then copies the
+# runtime DLLs next to the runner executable (where DynamicLibrary.open
+# looks) and the model into a "models" subfolder next to it.
+set(WHISPER_WINDOWS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../whisper")
+if(EXISTS "${WHISPER_WINDOWS_DIR}/whisper.dll")
+  set(WHISPER_RUNTIME_DLLS
+    "${WHISPER_WINDOWS_DIR}/whisper.dll"
+    "${WHISPER_WINDOWS_DIR}/ggml.dll"
+    "${WHISPER_WINDOWS_DIR}/ggml-base.dll"
+  )
+  file(GLOB WHISPER_CPU_DLLS
+    "${WHISPER_WINDOWS_DIR}/ggml-cpu-*.dll"
+  )
+  foreach(WHISPER_DLL IN LISTS WHISPER_RUNTIME_DLLS WHISPER_CPU_DLLS)
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${WHISPER_DLL}"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>"
+      COMMENT "Copying ${WHISPER_DLL} next to the voice testbed executable"
+    )
+  endforeach()
+  # The model is large (~141 MB) and gitignored; when it is present it is
+  # copied into models/ next to the executable so a developer build works
+  # without an in-app download. Production installs use the app's model
+  # manager instead.
+  if(EXISTS "${WHISPER_WINDOWS_DIR}/ggml-base.en.bin")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/models"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${WHISPER_WINDOWS_DIR}/ggml-base.en.bin"
+        "$<TARGET_FILE_DIR:${BINARY_NAME}>/models/ggml-base.en.bin"
+      COMMENT "Copying the Whisper model next to the voice testbed executable"
+    )
+  endif()
+else()
+  message(STATUS
+    "Whisper Windows DLLs not found in ${WHISPER_WINDOWS_DIR}; speech "
+    "recognition will report a native-library error and typed commands will "
+    "still work. Run tools/fetch_whisper_windows.ps1 to enable it.")
+endif()

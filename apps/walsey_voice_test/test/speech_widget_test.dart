@@ -234,7 +234,7 @@ void main() {
     await tester.tap(find.text('Algerian Darija (unsupported)').last);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('No Vosk model exists'), findsOneWidget);
+    expect(find.textContaining('No offline model exists'), findsOneWidget);
     final button = tester.widget<FilledButton>(
       find.widgetWithText(FilledButton, 'Start listening'),
     );
@@ -250,13 +250,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Offline language models'), findsOneWidget);
+    // The Whisper primary model is listed first, then the three Vosk
+    // fallbacks; each has its own explicit Install button.
+    expect(find.textContaining('ggml-base.en'), findsWidgets);
+    expect(find.text('Whisper · primary'), findsOneWidget);
     expect(
       find.textContaining('vosk-model-small-en-us-0.15'),
       findsWidgets,
     );
     expect(find.textContaining('vosk-model-small-fr-0.22'), findsWidgets);
     expect(find.textContaining('vosk-model-small-ar-0.3'), findsWidgets);
-    expect(find.text('Install'), findsNWidgets(3));
+    expect(find.text('Vosk · fallback'), findsNWidgets(3));
+    expect(find.text('Install'), findsNWidgets(4));
     expect(find.textContaining('Nothing is downloaded at startup'), findsOneWidget);
     expect(
       find.textContaining('No Algerian Darija model exists'),
@@ -313,7 +318,7 @@ void main() {
     );
     expect(find.text('Duration'), findsOneWidget);
     expect(find.text('16000 Hz, mono, 16-bit PCM'), findsOneWidget);
-    expect(find.text('Raw transcript (Vosk, verbatim)'), findsOneWidget);
+    expect(find.text('Raw transcript (Whisper, verbatim)'), findsOneWidget);
     expect(find.text('set brightness to fifty percent'), findsWidgets);
     expect(find.text('Save test recording (WAV)'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Execute'), findsNothing);

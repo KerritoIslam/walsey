@@ -20,7 +20,8 @@ The three-stage roadmap remains:
 
 ```
 walsey_voice_core/            PURE DART. No Flutter, BLE, microphone or network.
-walsey_voice_speech/          Flutter adapter: Vosk + microphone + model setup.
+walsey_voice_speech/          Flutter adapter: whisper.cpp (primary) + Vosk
+                              (fallback), microphone + model setup.
 apps/walsey_voice_test/       Flutter testbed: speech or text + interpretation.
 ```
 

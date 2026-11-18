@@ -7,8 +7,10 @@ walsey/
   walsey_led_core/        PURE DART. No Flutter, no BLE plugin.
   walsey_led_ble/         (Stage 2) Flutter plugin package: LedTransport over bluetooth_low_energy
   walsey_voice_core/      PURE DART. Voice parser + SpeechRecognizer port; no Flutter, BLE or engine.
-  walsey_voice_speech/    Voice Stage 2 Flutter adapter: Vosk FFI, microphone, model setup.
-  apps/walsey/            (Stage 2) main app: connection UI + typed controls + first-hardware-test tab
+  walsey_voice_speech/    Voice Stage 2 Flutter adapter: whisper.cpp (primary)
+                          and Vosk (fallback) FFI, microphone, model setup.
+  apps/walsey/            (Stage 2) main app: design system, responsive shell,
+                          devices/studio/assistant UI, diagnostics + hardware test
   apps/walsey_voice_test/ Voice Stage 2 testbed: speech/typed command -> interpretation, no execution
   tools/ble_probe/        (Stage 1) read-only discovery/connection prototype, frozen
 ```
@@ -18,6 +20,25 @@ the `SpeechRecognizer` port from `walsey_voice_core` and feeds recognized text
 to the same `VoiceCommandParser` as typed input. Neither voice package imports
 `walsey_led_core` or `walsey_led_ble`, so no voice code path can emit a frame.
 `docs/voice_stage2.md` documents the recognition pipeline.
+`docs/wake_word.md` documents the hands-free pipeline (VAD, pre-roll,
+`WakeWordCommandLoop`, opt-in app wiring), why no wake model/backend ships, and
+the Windows / Android background-microphone constraints; the measured result is
+that the Vosk phonetic approach is not viable. `docs/voice_assistant_report.md`
+holds the current measured state, and `docs/music_mode.md` /
+`docs/led_segments.md` record two unverified Studio ideas.
+
+In the app, `lib/voice/voice_session_controller.dart` is the voice seam: it owns
+the single hold-to-talk session, the optional opt-in hands-free listener, routes
+the transcript through `CommandInterpreter` (`VoicePlanParser`), and only then
+through `CommandExecutor` (`VoicePlanExecutor`) over the existing
+`LedConnectionService`. Plans are data; a parser failure never reaches the
+executor, typed input is never executed, and nothing starts listening at launch.
+`walsey_voice_core/lib/src/context/voice_conversation.dart` is a small expiring
+target memory used only to propose a reconnect for pronoun follow-ups; it never
+stores LED state (the protocol has no read-back). Optional spoken responses go
+through `lib/voice/voice_response_speaker.dart` (off by default, OS voice only);
+`lib/control/led_feedback.dart` is a dormant, unwired cue abstraction;
+`lib/music/spectrum.dart` is offline analysis that never sends.
 
 Why `walsey_led_ble` is separate: `bluetooth_low_energy` is a Flutter plugin, so
 depending on it would make the core non-pure and untestable with `dart test`.
@@ -35,7 +56,7 @@ by accident.
 Layer split in Stage 2 (no shortcut between layers):
 
 ```
-UI (apps/walsey/lib/ui, main.dart)
+UI (apps/walsey/lib/app, lib/features, lib/design, main.dart)
   ↓ typed calls only: setPower / setColor / setBrightness / applyEffect / authenticate
 App service (apps/walsey/lib/control/led_control_service.dart)
   ↓ LeddmxDriver + logging + one-command-at-a-time guard
@@ -50,6 +71,15 @@ BLE adapter (walsey_led_ble/lib/src/plugin_central.dart)
 Connection state machine (`apps/walsey/lib/connection/led_connection_service.dart`)
 owns scan/connect/discover/validate/disconnect, keeps the probe's guarantee set,
 and binds the driver after FFE0/FFE1 validation. It sends nothing.
+
+Presentation layer (`lib/app`, `lib/features`, `lib/design`): a responsive shell
+(Windows sidebar + optional diagnostic dock, Android five-destination bottom
+navigation), a shared token/theme/widget design system, and page-level features.
+`lib/state` holds only local, offline preferences and an activity ledger
+(`shared_preferences`). Activity entries describe app events and the BLE write
+result; they never claim a device state. Phone↔PC and Automations are visible
+as planned-capability pages with no controls, and Studio reports unsupported
+features (segments, music modes) instead of simulating them.
 
 ## Inside `walsey_led_core`
 
