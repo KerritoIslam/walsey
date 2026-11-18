@@ -17,7 +17,8 @@
 // Every WAV must be 16 kHz, mono, 16-bit PCM: the format the recognizer asks
 // the microphone for. A file with another format is rejected, never resampled.
 //
-// The script reports exact-sentence accuracy and word error rate separately,
+// The script reports raw and normalized exact-sentence accuracy, word error
+// rate and character error rate separately,
 // plus whether the *expected* sentence parses (a corpus sanity check) and
 // whether the *transcript* parses to the same intent and parameters.
 //
@@ -40,14 +41,27 @@ import 'package:walsey_voice_speech/src/vosk/vosk_result.dart';
 
 /// One expected sentence and its audio file.
 final class CorpusItem {
-  CorpusItem(this.fileName, this.expected, this.speaker);
+  CorpusItem(
+    this.fileName,
+    this.expected,
+    this.speaker, {
+    this.expectsCommand = true,
+  });
 
   final String fileName;
+
+  /// The sentence that was spoken, without the corpus marker.
   final String expected;
 
   /// Derived from the file name (`01-05-microsoft-david-desktop.wav` →
   /// `microsoft david desktop`); used only to break the summary down per voice.
   final String speaker;
+
+  /// False for near-miss/negative lines (written with a leading `!`): the
+  /// utterance must **not** become a command. A transcript that parses on a
+  /// negative is a false command, which is a safety failure, not an accuracy
+  /// miss.
+  final bool expectsCommand;
 }
 
 /// Measurement for one corpus file.
@@ -64,6 +78,7 @@ final class ItemResult {
     required this.parserMatch,
     required this.expectedDescription,
     required this.transcriptDescription,
+    this.expectsCommand = true,
   });
 
   final String fileName;
@@ -72,6 +87,9 @@ final class ItemResult {
   final String transcript;
   final AudioStats audio;
   final double decodeSeconds;
+
+  /// The line is a positive command (no `!` marker in the corpus).
+  final bool expectsCommand;
 
   /// The expected sentence itself is a valid command (corpus sanity).
   final bool expectedParses;
@@ -85,6 +103,26 @@ final class ItemResult {
   final String expectedDescription;
   final String transcriptDescription;
 
+  /// The transcript produced a command for a line that must not become one.
+  bool get falseCommand => !expectsCommand && transcriptParses;
+
+  /// The corpus sanity check for either polarity: a positive must parse, a
+  /// negative must be rejected.
+  bool get expectedOutcomeMet =>
+      expectsCommand ? expectedParses : !expectedParses;
+
+  /// The outcome this benchmark is actually about: a positive must parse to
+  /// the expected intent/parameters, a negative must stay rejected.
+  bool get outcomeCorrect => expectsCommand ? parserMatch : !transcriptParses;
+
+  /// Both sides produced the same parameter rows (colour/brightness/effect).
+  bool get parametersMatch =>
+      expectedDescription == transcriptDescription;
+
+  /// Strict comparison, preserving case, punctuation and spacing.
+  bool get rawExact => expected == transcript;
+
+  /// Comparison after case, punctuation and spacing normalization.
   bool get exact => _normalize(expected) == _normalize(transcript);
 
   /// Exact match after mapping spelled-out numbers to digits on both sides.
@@ -102,20 +140,35 @@ final class ItemResult {
     _foldNumbers(_tokens(transcript)),
   );
 
+  double get characterErrorRate =>
+      _characterErrorRate(_normalize(expected), _normalize(transcript));
+
+  double get characterErrorRateDigits => _characterErrorRate(
+    _normalizeDigits(expected),
+    _normalizeDigits(transcript),
+  );
+
   Map<String, Object?> toJson() => {
     'file': fileName,
     'speaker': speaker,
     'expected': expected,
     'transcript': transcript,
+    'rawExact': rawExact,
     'exact': exact,
     'exactDigitNormalized': exactDigitNormalized,
     'wer': _round(wordErrorRate),
     'werDigitNormalized': _round(wordErrorRateDigits),
+    'cer': _round(characterErrorRate),
+    'cerDigitNormalized': _round(characterErrorRateDigits),
     'decodeSeconds': _round(decodeSeconds),
     'rtf': _round(decodeSeconds / math.max(audio.durationSeconds, 1e-9)),
     'expectedParses': expectedParses,
     'transcriptParses': transcriptParses,
     'parserMatch': parserMatch,
+    'expectsCommand': expectsCommand,
+    'falseCommand': falseCommand,
+    'outcomeCorrect': outcomeCorrect,
+    'parametersMatch': parametersMatch,
     'expectedInterpretation': expectedDescription,
     'transcriptInterpretation': transcriptDescription,
     'audio': audio.toJson(),
@@ -257,6 +310,7 @@ Future<int> _run(_Options options) async {
         stats: stats,
         seconds: transcript.seconds,
         parser: parser,
+        planMode: options.plan,
       ),
     );
   }
@@ -273,7 +327,7 @@ Future<int> _run(_Options options) async {
     stdout.writeln('=== per file ===');
     for (final result in results) {
       stdout.writeln(
-        '${result.exact ? "EXACT" : "-----"}  '
+        '${result.expectsCommand ? (result.exact ? "EXACT" : "-----") : (result.falseCommand ? "FALSE!" : "reject")}  '
         '${result.fileName}  '
         'wer=${result.wordErrorRate.toStringAsFixed(3)}  '
         'rtf=${(result.decodeSeconds / math.max(result.audio.durationSeconds, 1e-9)).toStringAsFixed(3)}',
@@ -292,12 +346,21 @@ Future<int> _run(_Options options) async {
   }
 
   final n = results.length;
+  final rawExact = results.where((r) => r.rawExact).length;
   final exact = results.where((r) => r.exact).length;
   final exactDigits = results.where((r) => r.exactDigitNormalized).length;
   final werTotal = results.fold<double>(0, (sum, r) => sum + r.wordErrorRate);
   final werDigitsTotal = results.fold<double>(
     0,
     (sum, r) => sum + r.wordErrorRateDigits,
+  );
+  final cerTotal = results.fold<double>(
+    0,
+    (sum, r) => sum + r.characterErrorRate,
+  );
+  final cerDigitsTotal = results.fold<double>(
+    0,
+    (sum, r) => sum + r.characterErrorRateDigits,
   );
   final parseableExpected = results.where((r) => r.expectedParses).length;
   final parsedTranscript = results.where((r) => r.transcriptParses).length;
@@ -313,7 +376,11 @@ Future<int> _run(_Options options) async {
   stdout.writeln('=== results ===');
   stdout.writeln('files                 $n');
   stdout.writeln(
-    'exact sentence        $exact/$n (${_percent(exact, n)}) verbatim',
+    'exact sentence        $rawExact/$n (${_percent(rawExact, n)}) raw',
+  );
+  stdout.writeln(
+    '                      $exact/$n (${_percent(exact, n)}) '
+    'case/punctuation normalized',
   );
   stdout.writeln(
     '                      $exactDigits/$n (${_percent(exactDigits, n)}) '
@@ -323,9 +390,19 @@ Future<int> _run(_Options options) async {
     'word error rate       ${(werTotal / n).toStringAsFixed(4)} verbatim, '
     '${(werDigitsTotal / n).toStringAsFixed(4)} digits folded',
   );
+  stdout.writeln(
+    'character error rate  ${(cerTotal / n).toStringAsFixed(4)} normalized, '
+    '${(cerDigitsTotal / n).toStringAsFixed(4)} digits folded',
+  );
   stdout.writeln('expected parses       $parseableExpected/$n (corpus sanity)');
+  stdout.writeln(
+    'expected outcome ok   '
+    '${results.where((r) => r.expectedOutcomeMet).length}/$n',
+  );
   stdout.writeln('transcript parses     $parsedTranscript/$n');
   stdout.writeln('same command          $parserMatches/$n');
+  final outcomes = _outcomeMetrics(results);
+  _printOutcomeMetrics(outcomes);
   stdout.writeln(
     'audio                 ${audioSeconds.toStringAsFixed(1)} s total',
   );
@@ -357,11 +434,12 @@ Future<int> _run(_Options options) async {
       );
     }
   }
-  final rejected = results.where((r) => !r.expectedParses).toList();
+  final rejected = results.where((r) => !r.expectedOutcomeMet).toList();
   if (rejected.isNotEmpty) {
     stdout.writeln('');
     stdout.writeln(
-      '!!! these expected sentences do not parse — the corpus is wrong:',
+      '!!! these expected sentences do not match their own marker — the corpus '
+      'is wrong:',
     );
     for (final result in rejected) {
       stdout.writeln(
@@ -392,15 +470,20 @@ Future<int> _run(_Options options) async {
     },
     'summary': {
       'files': n,
+      'rawExactSentences': rawExact,
+      'rawExactSentenceRate': _round(rawExact / n),
       'exactSentences': exact,
       'exactSentenceRate': _round(exact / n),
       'exactSentencesDigitNormalized': exactDigits,
       'exactSentenceRateDigitNormalized': _round(exactDigits / n),
       'meanWordErrorRate': _round(werTotal / n),
       'meanWordErrorRateDigitNormalized': _round(werDigitsTotal / n),
+      'meanCharacterErrorRate': _round(cerTotal / n),
+      'meanCharacterErrorRateDigitNormalized': _round(cerDigitsTotal / n),
       'expectedParses': parseableExpected,
       'transcriptParses': parsedTranscript,
       'sameCommand': parserMatches,
+      ...outcomes,
       'audioSeconds': _round(audioSeconds),
       'decodeSeconds': _round(decodeSeconds),
       'realTimeFactor': _round(decodeSeconds / math.max(audioSeconds, 1e-9)),
@@ -496,6 +579,7 @@ Future<int> _runTranscripts(
         stats: stats,
         seconds: line.seconds,
         parser: parser,
+        planMode: options.plan,
       ),
     );
   }
@@ -505,11 +589,16 @@ Future<int> _runTranscripts(
   }
 
   final n = results.length;
+  final rawExact = results.where((r) => r.rawExact).length;
   final exact = results.where((r) => r.exact).length;
   final exactDigits = results.where((r) => r.exactDigitNormalized).length;
   final wer = results.fold<double>(0, (s, r) => s + r.wordErrorRate) / n;
   final werDigits =
       results.fold<double>(0, (s, r) => s + r.wordErrorRateDigits) / n;
+  final cer =
+      results.fold<double>(0, (s, r) => s + r.characterErrorRate) / n;
+  final cerDigits =
+      results.fold<double>(0, (s, r) => s + r.characterErrorRateDigits) / n;
   final matches = results.where((r) => r.parserMatch).length;
   final audioSeconds = results.fold<double>(
     0,
@@ -526,7 +615,11 @@ Future<int> _runTranscripts(
   stdout.writeln('');
   stdout.writeln('files                 $n');
   stdout.writeln(
-    'exact sentence        $exact/$n (${_percent(exact, n)}) verbatim',
+    'exact sentence        $rawExact/$n (${_percent(rawExact, n)}) raw',
+  );
+  stdout.writeln(
+    '                      $exact/$n (${_percent(exact, n)}) '
+    'case/punctuation normalized',
   );
   stdout.writeln(
     '                      $exactDigits/$n (${_percent(exactDigits, n)}) '
@@ -536,7 +629,13 @@ Future<int> _runTranscripts(
     'word error rate       ${wer.toStringAsFixed(4)} verbatim, '
     '${werDigits.toStringAsFixed(4)} digits folded',
   );
+  stdout.writeln(
+    'character error rate  ${cer.toStringAsFixed(4)} normalized, '
+    '${cerDigits.toStringAsFixed(4)} digits folded',
+  );
   stdout.writeln('same command          $matches/$n');
+  final outcomes = _outcomeMetrics(results);
+  _printOutcomeMetrics(outcomes);
   stdout.writeln(
     'decode                ${decodeSeconds.toStringAsFixed(2)} s total',
   );
@@ -558,13 +657,18 @@ Future<int> _runTranscripts(
     },
     'summary': {
       'files': n,
+      'rawExactSentences': rawExact,
+      'rawExactSentenceRate': _round(rawExact / n),
       'exactSentences': exact,
       'exactSentenceRate': _round(exact / n),
       'exactSentencesDigitNormalized': exactDigits,
       'exactSentenceRateDigitNormalized': _round(exactDigits / n),
       'meanWordErrorRate': _round(wer),
       'meanWordErrorRateDigitNormalized': _round(werDigits),
+      'meanCharacterErrorRate': _round(cer),
+      'meanCharacterErrorRateDigitNormalized': _round(cerDigits),
       'sameCommand': matches,
+      ...outcomes,
       'audioSeconds': _round(audioSeconds),
       'decodeSeconds': _round(decodeSeconds),
       'realTimeFactor': audioSeconds > 0
@@ -589,6 +693,7 @@ ItemResult _buildResult({
   required AudioStats stats,
   required double seconds,
   required VoiceCommandParser parser,
+  bool planMode = false,
 }) {
   final expectedResult = parser.parse(item.expected);
   final transcriptResult = parser.parse(transcript);
@@ -598,6 +703,34 @@ ItemResult _buildResult({
   final transcriptCommand = transcriptResult is VoiceCommandResult
       ? transcriptResult.command
       : null;
+
+  var expectedParses = expectedCommand != null;
+  var transcriptParses = transcriptCommand != null;
+  var parserMatch = _sameCommand(expectedCommand, transcriptCommand);
+  var expectedDescription = _describe(expectedResult);
+  var transcriptDescription = _describe(transcriptResult);
+
+  if (planMode) {
+    final planner = VoicePlanParser(parser: parser);
+    final expectedPlan = planner.parse(item.expected);
+    final transcriptPlan = planner.parse(transcript);
+    final expectedSteps = expectedPlan is VoicePlanReady
+        ? expectedPlan.plan.summary
+        : const <String>[];
+    final transcriptSteps = transcriptPlan is VoicePlanReady
+        ? transcriptPlan.plan.summary
+        : const <String>[];
+    expectedParses = expectedSteps.isNotEmpty;
+    transcriptParses = transcriptSteps.isNotEmpty;
+    parserMatch = _sameList(expectedSteps, transcriptSteps);
+    expectedDescription = expectedSteps.isEmpty
+        ? _describePlanFailure(expectedPlan)
+        : expectedSteps.join(' | ');
+    transcriptDescription = transcriptSteps.isEmpty
+        ? _describePlanFailure(transcriptPlan)
+        : transcriptSteps.join(' | ');
+  }
+
   return ItemResult(
     fileName: item.fileName,
     speaker: item.speaker,
@@ -605,12 +738,26 @@ ItemResult _buildResult({
     transcript: transcript,
     audio: stats,
     decodeSeconds: seconds,
-    expectedParses: expectedCommand != null,
-    transcriptParses: transcriptCommand != null,
-    parserMatch: _sameCommand(expectedCommand, transcriptCommand),
-    expectedDescription: _describe(expectedResult),
-    transcriptDescription: _describe(transcriptResult),
+    expectedParses: expectedParses,
+    transcriptParses: transcriptParses,
+    parserMatch: parserMatch,
+    expectedDescription: expectedDescription,
+    transcriptDescription: transcriptDescription,
+    expectsCommand: item.expectsCommand,
   );
+}
+
+String _describePlanFailure(VoicePlanResult result) => result
+        is VoicePlanFailure
+    ? '${result.kind.name}: ${result.explanation}'
+    : 'no plan';
+
+bool _sameList(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 final class _TranscriptLine {
@@ -619,6 +766,136 @@ final class _TranscriptLine {
   final String text;
   final double seconds;
 }
+
+/// The polarity-aware metrics that make this benchmark about *Walsey*, not just
+/// about transcription.
+///
+/// Positives measure whether a spoken command became the right command.
+/// Negatives (corpus lines prefixed with `!`) measure the opposite and more
+/// important safety property: an utterance that is not a command, or that is a
+/// question/negation/near-miss, must stay rejected. A negative that parses is a
+/// **false command**, never an "accuracy miss".
+Map<String, Object?> _outcomeMetrics(List<ItemResult> results) {
+  final positives = results.where((r) => r.expectsCommand).toList();
+  final negatives = results.where((r) => !r.expectsCommand).toList();
+  final correctPositives = positives.where((r) => r.parserMatch).length;
+  final rejectedNegatives = negatives.where((r) => !r.transcriptParses).length;
+  final falseCommands = negatives.where((r) => r.falseCommand).length;
+
+  final entityTotal = <String, int>{};
+  final entityCorrect = <String, int>{};
+  for (final result in positives) {
+    final kind = _entityKind(result.expectedDescription);
+    if (kind == null) continue;
+    entityTotal[kind] = (entityTotal[kind] ?? 0) + 1;
+    if (result.parametersMatch) {
+      entityCorrect[kind] = (entityCorrect[kind] ?? 0) + 1;
+    }
+  }
+  final entitySum = entityTotal.values.fold<int>(0, (a, b) => a + b);
+  final entityHits = entityCorrect.values.fold<int>(0, (a, b) => a + b);
+
+  final decodeTimes = results.map((r) => r.decodeSeconds).toList()..sort();
+  final meanDecode = decodeTimes.isEmpty
+      ? 0.0
+      : decodeTimes.reduce((a, b) => a + b) / decodeTimes.length;
+  final p95Decode = decodeTimes.isEmpty
+      ? 0.0
+      : decodeTimes[((decodeTimes.length - 1) * 0.95).round()];
+
+  return {
+    'positives': positives.length,
+    'negatives': negatives.length,
+    'correctPositives': correctPositives,
+    'exactCommandRate': positives.isEmpty
+        ? null
+        : _round(correctPositives / positives.length),
+    'rejectedNegatives': rejectedNegatives,
+    'rejectionRate': negatives.isEmpty
+        ? null
+        : _round(rejectedNegatives / negatives.length),
+    'falseCommands': falseCommands,
+    'falseCommandRate': negatives.isEmpty
+        ? null
+        : _round(falseCommands / negatives.length),
+    'entityTotal': entitySum,
+    'entityCorrect': entityHits,
+    'entityAccuracy': entitySum == 0 ? null : _round(entityHits / entitySum),
+    'entityByKind': {
+      for (final kind in entityTotal.keys)
+        kind: {
+          'total': entityTotal[kind],
+          'correct': entityCorrect[kind] ?? 0,
+        },
+    },
+    'meanDecodeSeconds': _round(meanDecode),
+    'p95DecodeSeconds': _round(p95Decode),
+  };
+}
+
+/// `Color: blue` → `color`, `Brightness: 50%` → `brightness`, …; `null` when
+/// the command carries no entity to score.
+String? _entityKind(String description) {
+  final text = description.toLowerCase();
+  if (text.contains('color:') || text.contains('set the color to')) {
+    return 'color';
+  }
+  if (text.contains('brightness:') || text.contains('set brightness to')) {
+    return 'brightness';
+  }
+  if (text.contains('effect id:') || text.contains('apply effect')) {
+    return 'effect';
+  }
+  return null;
+}
+
+void _printOutcomeMetrics(Map<String, Object?> metrics) {
+  stdout.writeln('positives             ${metrics["positives"]}');
+  stdout.writeln('negatives             ${metrics["negatives"]}');
+  final exactRate = metrics['exactCommandRate'];
+  if (exactRate != null) {
+    stdout.writeln(
+      'exact command         ${metrics["correctPositives"]}/'
+      '${metrics["positives"]} (${_percentOf(exactRate)})',
+    );
+  }
+  final rejectionRate = metrics['rejectionRate'];
+  if (rejectionRate != null) {
+    stdout.writeln(
+      'negative rejected     ${metrics["rejectedNegatives"]}/'
+      '${metrics["negatives"]} (${_percentOf(rejectionRate)})',
+    );
+    stdout.writeln(
+      'FALSE COMMANDS        ${metrics["falseCommands"]}/'
+      '${metrics["negatives"]} (${_percentOf(metrics["falseCommandRate"])})',
+    );
+  }
+  final entityAccuracy = metrics['entityAccuracy'];
+  if (entityAccuracy != null) {
+    stdout.writeln(
+      'entity accuracy       ${metrics["entityCorrect"]}/'
+      '${metrics["entityTotal"]} (${_percentOf(entityAccuracy)})',
+    );
+    final kinds = metrics['entityByKind'] as Map<String, Object?>;
+    for (final entry in kinds.entries) {
+      final row = entry.value as Map<String, Object?>;
+      stdout.writeln(
+        '  ${entry.key.padRight(18)} ${row["correct"]}/${row["total"]}',
+      );
+    }
+  }
+  stdout.writeln(
+    'decode latency        mean '
+    '${_milliseconds(metrics["meanDecodeSeconds"])} ms, '
+    'p95 ${_milliseconds(metrics["p95DecodeSeconds"])} ms',
+  );
+}
+
+String _percentOf(Object? rate) =>
+    rate == null ? 'n/a' : '${((rate as num) * 100).toStringAsFixed(1)}%';
+
+String _milliseconds(Object? seconds) =>
+    seconds == null ? 'n/a' : ((seconds as num) * 1000).toStringAsFixed(0);
 
 /// Recognizes one WAV and returns its text plus the decode wall-clock time.
 _Transcript? _recognize({
@@ -686,11 +963,26 @@ List<CorpusItem> _readManifest(File manifest) {
       continue;
     }
     final name = line.substring(0, tab).trim();
-    final expected = line.substring(tab + 1).trim();
+    var expected = line.substring(tab + 1).trim();
     if (name.isEmpty || expected.isEmpty) {
       continue;
     }
-    items.add(CorpusItem(name, expected, _speakerFromName(name)));
+    var expectsCommand = true;
+    if (expected.startsWith('!')) {
+      expectsCommand = false;
+      expected = expected.substring(1).trim();
+      if (expected.isEmpty) {
+        continue;
+      }
+    }
+    items.add(
+      CorpusItem(
+        name,
+        expected,
+        _speakerFromName(name),
+        expectsCommand: expectsCommand,
+      ),
+    );
   }
   return items;
 }
@@ -822,6 +1114,33 @@ double _wordErrorRateOn(List<String> reference, List<String> hypothesis) {
     previous = current;
   }
   return previous[hypothesis.length] / reference.length;
+}
+
+double _characterErrorRate(String reference, String hypothesis) {
+  final referenceCharacters = reference.runes.toList();
+  final hypothesisCharacters = hypothesis.runes.toList();
+  if (referenceCharacters.isEmpty) {
+    return hypothesisCharacters.isEmpty ? 0 : 1;
+  }
+  var previous = List<int>.generate(
+    hypothesisCharacters.length + 1,
+    (i) => i,
+  );
+  for (var i = 1; i <= referenceCharacters.length; i++) {
+    final current = List<int>.filled(hypothesisCharacters.length + 1, 0);
+    current[0] = i;
+    for (var j = 1; j <= hypothesisCharacters.length; j++) {
+      final cost = referenceCharacters[i - 1] == hypothesisCharacters[j - 1]
+          ? 0
+          : 1;
+      current[j] = math.min(
+        math.min(current[j - 1] + 1, previous[j] + 1),
+        previous[j - 1] + cost,
+      );
+    }
+    previous = current;
+  }
+  return previous[hypothesisCharacters.length] / referenceCharacters.length;
 }
 
 /// Grammar covering the *supported LED command vocabulary*.
@@ -967,6 +1286,7 @@ final class _Options {
     required this.outPath,
     required this.limit,
     required this.verbose,
+    required this.plan,
   });
 
   final String modelPath;
@@ -985,6 +1305,10 @@ final class _Options {
   final int limit;
   final bool verbose;
 
+  /// Score with [VoicePlanParser] instead of the single-command parser, so
+  /// compound/multi-step lines are measured against their ordered plan.
+  final bool plan;
+
   static _Options? parse(List<String> arguments) {
     String? model;
     String? corpus;
@@ -995,6 +1319,7 @@ final class _Options {
     var unk = false;
     var verbose = false;
     var limit = 0;
+    var plan = false;
     for (var i = 0; i < arguments.length; i++) {
       final argument = arguments[i];
       switch (argument) {
@@ -1014,6 +1339,8 @@ final class _Options {
           grammar = true;
         case '--unk':
           unk = true;
+        case '--plan':
+          plan = true;
         case '--verbose':
         case '-v':
           verbose = true;
@@ -1041,6 +1368,7 @@ final class _Options {
       outPath: out,
       limit: limit,
       verbose: verbose,
+      plan: plan,
     );
   }
 
@@ -1056,7 +1384,7 @@ final class _Options {
     stderr.writeln(
       'usage: dart run bin/voice_accuracy.dart --model <dir> --corpus <dir> '
       '[--library <dll>] [--grammar [--unk]] [--transcripts <tsv>] '
-      '[--out <json>] [--limit <n>] [-v]',
+      '[--plan] [--out <json>] [--limit <n>] [-v]',
     );
   }
 }

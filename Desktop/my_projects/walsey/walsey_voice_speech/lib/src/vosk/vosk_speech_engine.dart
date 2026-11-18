@@ -3,7 +3,7 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'speech_engine.dart';
+import '../engine/speech_engine.dart';
 import 'vosk_bindings.dart';
 import 'vosk_result.dart';
 

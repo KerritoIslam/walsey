@@ -9,6 +9,14 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
+    // Whisper (whisper.cpp) native libraries for the primary speech engine.
+    // The .so files are built by tools/build_whisper_android.ps1 (they are not
+    // committed) into jniLibs-whisper/<abi>/, and the Dart FFI adapter loads
+    // libwhisper.so / libggml.so from the APK's lib/<abi>/ folder.
+    sourceSets.getByName("main") {
+        jniLibs.srcDir("src/main/jniLibs-whisper")
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

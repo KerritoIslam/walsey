@@ -1,14 +1,27 @@
-# Repeatable speech-recognition test set: one LED command per line.
+# Repeatable speech-recognition test set: one utterance per line.
 #
 # These lines are the *expected* sentences. tools/voice_accuracy/make_tts_corpus.ps1
 # speaks each line with the installed Windows text-to-speech voices and writes
 # 16 kHz mono PCM16 WAV files next to a manifest; bin/voice_accuracy.dart then
-# compares the raw Vosk transcript with these exact strings.
+# compares the raw Vosk/Whisper transcript with these exact strings.
+#
+# Two kinds of line:
+#
+#   turn the lights on      a command: the transcript must parse to this intent
+#                           and these parameters.
+#   !play some music        a negative written with a leading "!": the utterance
+#                           must NOT become a command. A transcript that parses
+#                           is reported as a FALSE COMMAND, which is a safety
+#                           failure rather than an accuracy miss.
 #
 # This is synthetic speech, not human recordings: useful for a deterministic,
 # repeatable regression baseline, not a substitute for the on-device checklist.
+# The original 30 lines are kept first and unchanged so file names stay stable
+# and old baselines stay comparable; new lines are appended.
 #
-# Keep the vocabulary inside what the Stage 1 parser accepts. 30 entries.
+# Keep the vocabulary inside what the Stage 1 parser accepts.
+
+# --- original baseline (30) ---
 turn the lights on
 turn the lights off
 switch on the lights
@@ -39,3 +52,51 @@ walsey activate effect 7
 turn the lights white
 set brightness to 0 percent
 make the lights orange
+
+# --- natural single-command variations (positives) ---
+okay turn the lights on
+hey walsey turn the lights on
+please turn the lights off
+walsey make the lights blue
+walsey set the brightness to 40 percent
+set the lights to white
+change the color to green
+change brightness to 30 percent
+turn up the brightness
+turn down the brightness
+activate effect 20
+set effect 100
+make the lights magenta
+walsey make the lights purple
+set the brightness to 5 percent
+switch on the lights please
+turn on the lights now
+walsey turn off the lights
+activate effect 210
+turn the lights cyan
+
+# --- wake-phrase variants (positives) ---
+hey walsey make the lights red
+okay walsey set brightness to 80 percent
+hey walsey activate effect 12
+walsey turn the lights off please
+
+# --- negatives: must NOT become a command ---
+!what is the weather like today
+!play some music
+!make me a sandwich
+!turn on the television
+!set the volume to fifty percent
+!do not turn the lights on
+!should I turn the lights on
+!the city lights are pretty
+!well see you later
+!will say it again
+!while she is talking
+!set brightness to two hundred percent
+!activate effect three hundred
+!turn off the volume
+!i like the blue sky
+!where is the light
+!is the light on
+!walsey

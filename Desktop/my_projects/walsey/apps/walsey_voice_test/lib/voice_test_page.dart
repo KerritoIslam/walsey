@@ -9,7 +9,8 @@ import 'model_manager_dialog.dart';
 /// Speech and typed input share the exact same [VoiceCommandParser] and the
 /// result still says "not executed". This page imports the voice core and the
 /// speech adapter only: there is no BLE dependency, so no code path here can
-/// change the LEDs.
+/// change the LEDs. The primary engine is Whisper (whisper.cpp); Vosk stays
+/// available as an installable fallback.
 class VoiceTestPage extends StatefulWidget {
   const VoiceTestPage({
     super.key,
@@ -66,12 +67,17 @@ class _VoiceTestPageState extends State<VoiceTestPage> {
     _diagnostics.addListener(_onVoiceChanged);
     _recognizer =
         widget.recognizer ??
-        VoskSpeechRecognizer.platform(diagnostics: _diagnostics);
+        WhisperSpeechRecognizer.platform(diagnostics: _diagnostics);
     _modelStore = widget.modelStore ?? ModelStore.platform();
     _parser = widget.parser ?? VoiceCommandParser();
     _voice = PushToTalkController(
       recognizer: _recognizer,
       parser: _parser,
+      // Whisper decodes the whole utterance after stop, which on a phone can
+      // take a few seconds for a long command. The watchdog is still there to
+      // catch a hung engine — 20 s bounds that without cutting off a long
+      // batch decode on a slow device.
+      recognitionTimeout: const Duration(seconds: 20),
     )..addListener(_onVoiceChanged);
     _refreshModelStatus();
   }
@@ -94,9 +100,20 @@ class _VoiceTestPageState extends State<VoiceTestPage> {
     }
   }
 
+  /// The model the active engine would use for [language], so the model
+  /// status line and the setup dialog always describe the engine that will
+  /// actually run. Test fakes keep the old Vosk-model behavior.
+  SpeechModel? _modelFor(SpeechLanguage language) {
+    final recognizer = _recognizer;
+    if (recognizer is EngineSpeechRecognizer) {
+      return recognizer.modelFor(language);
+    }
+    return language.model;
+  }
+
   Future<void> _refreshModelStatus() async {
     final generation = ++_modelCheckGeneration;
-    final model = _voice.language.model;
+    final model = _modelFor(_voice.language);
     if (model == null) {
       if (mounted) {
         setState(() => _modelInstalled = false);
@@ -218,7 +235,9 @@ class _VoiceTestPageState extends State<VoiceTestPage> {
               const SizedBox(height: 16),
               _VoicePanel(
                 controller: _voice,
+                model: _modelFor(_voice.language),
                 modelInstalled: _modelInstalled,
+                whisperPrimary: _recognizer is WhisperSpeechRecognizer,
                 onMicPressed: _onMicPressed,
                 onCancel: _voice.cancel,
                 onRetry: _voice.retry,
@@ -315,7 +334,9 @@ class _VoiceTestPageState extends State<VoiceTestPage> {
 class _VoicePanel extends StatelessWidget {
   const _VoicePanel({
     required this.controller,
+    required this.model,
     required this.modelInstalled,
+    required this.whisperPrimary,
     required this.onMicPressed,
     required this.onCancel,
     required this.onRetry,
@@ -324,19 +345,36 @@ class _VoicePanel extends StatelessWidget {
   });
 
   final PushToTalkController controller;
+
+  /// The model the active engine uses for the selected language.
+  final SpeechModel? model;
   final bool? modelInstalled;
+
+  /// True when the primary engine is Whisper: languages without a Whisper
+  /// model are then shown but disabled.
+  final bool whisperPrimary;
   final Future<void> Function() onMicPressed;
   final Future<void> Function() onCancel;
   final Future<void> Function() onRetry;
   final Future<void> Function() onManageModels;
   final ValueChanged<SpeechLanguage?> onLanguageChanged;
 
+  String _languageLabel(SpeechLanguage language) {
+    var label = language.label;
+    if (!language.isSupported) {
+      label += ' (unsupported)';
+    } else if (whisperPrimary && language.whisperModel == null) {
+      label += ' (no Whisper model)';
+    }
+    return label;
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final status = controller.status;
 
-    final modelLabel = switch (controller.language.model) {
+    final modelLabel = switch (model) {
       null => 'No model exists',
       _ when modelInstalled == null => 'Model: checking…',
       _ when modelInstalled == true => 'Model installed',
@@ -382,10 +420,10 @@ class _VoicePanel extends StatelessWidget {
                       for (final language in SpeechLanguage.all)
                         DropdownMenuItem(
                           value: language,
+                          enabled: !whisperPrimary ||
+                              language.whisperModel != null,
                           child: Text(
-                            language.isSupported
-                                ? language.label
-                                : '${language.label} (unsupported)',
+                            _languageLabel(language),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -396,10 +434,10 @@ class _VoicePanel extends StatelessWidget {
                 Text(modelLabel, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
-            if (controller.language.model != null) ...[
+            if (model != null) ...[
               const SizedBox(height: 2),
               Text(
-                controller.language.model!.id,
+                model!.id,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -526,8 +564,8 @@ class _VoicePanel extends StatelessWidget {
                     Text(controller.finalText!),
                     const SizedBox(height: 6),
                     Text(
-                      'Vosk · ${controller.language.label} · on this device. '
-                      'Nothing was executed.',
+                      'Whisper (offline) · ${controller.language.label} · on '
+                      'this device. Nothing was executed.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -541,7 +579,7 @@ class _VoicePanel extends StatelessWidget {
   }
 }
 
-/// Verbatim Vosk output, shown before the parser sees the sentence.
+/// Verbatim engine output, shown before the parser sees the sentence.
 ///
 /// Keeping it separate from "Recognized text" makes a mishearing obvious: if
 /// the raw text is already wrong, the parser was never the problem.
@@ -560,7 +598,7 @@ class _RawTranscriptCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Raw transcript (Vosk, verbatim)',
+              'Raw transcript (Whisper, verbatim)',
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
@@ -695,9 +733,9 @@ class _StageBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 'Stage 2 test mode — execution disabled.\n'
-                'Speech is recognized offline with Vosk and parsed exactly like '
-                'typed text. Nothing you type here can change the LEDs, and no '
-                'LED command is ever sent.',
+                'Speech is recognized offline with Whisper and parsed exactly '
+                'like typed text. Nothing you type here can change the LEDs, '
+                'and no LED command is ever sent.',
                 style: TextStyle(color: colors.onTertiaryContainer),
               ),
             ),
@@ -865,13 +903,15 @@ class _LimitationsNote extends StatelessWidget {
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.bodySmall;
     return Text(
-      'Notes: Vosk needs one explicit per-language model download (about '
-      '40–100 MB) and runs fully offline once installed; no cloud service is '
-      'used. English (US) is the tested language; French and Modern Standard '
-      'Arabic models can be installed but the command parser is English-only, '
-      'and no Algerian Darija model exists. Brightness is validated as a whole '
-      'percentage 0..100 and is never clamped. Colours come from a fixed list. '
-      'Effects are documented ids only (1..210 or 255).',
+      'Notes: Whisper needs one explicit model download (about 141 MB) and '
+      'runs fully offline once installed; no cloud service is used. English '
+      '(US) is the tested language; the Whisper build has no French or Arabic '
+      'model, so those stay with the installable Vosk fallback, and no '
+      'Algerian Darija model exists. The command parser is English-only. '
+      'Whisper decodes after you stop talking, so no partial transcript is '
+      'shown while listening. Brightness is validated as a whole percentage '
+      '0..100 and is never clamped. Colours come from a fixed list. Effects '
+      'are documented ids only (1..210 or 255).',
       style: textStyle,
     );
   }

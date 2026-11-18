@@ -69,10 +69,34 @@ void main() {
     });
 
     test('a question is not executed', () {
-      expect(
-        failureFor('how do I turn on the lights').kind,
-        VoiceFailureKind.unsupported,
-      );
+      for (final phrase in [
+        'how do I turn on the lights',
+        // No question mark in speech: the interrogative opener must be enough.
+        'should I turn the lights on',
+        'do you like the blue light',
+        'may I turn off the lights',
+      ]) {
+        final failure = failureFor(phrase);
+        expect(
+          failure.kind,
+          VoiceFailureKind.unsupported,
+          reason: phrase,
+        );
+      }
+    });
+
+    test('a status question is recognized but never becomes an action', () {
+      final result = VoiceCommandParser().parse('is the light on');
+      expect(result, isA<VoiceCommandResult>());
+      expect((result as VoiceCommandResult).command.intent,
+          VoiceIntent.queryStatus);
+    });
+
+    test('a polite request with "can you" stays executable', () {
+      // Deliberate exception: the project treats "can you ..." as a request,
+      // not as an information question (see parser_power_test).
+      final result = VoiceCommandParser().parse('can you turn on the lights');
+      expect(result, isA<VoiceCommandResult>());
     });
   });
 

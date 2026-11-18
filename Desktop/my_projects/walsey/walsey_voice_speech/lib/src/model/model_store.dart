@@ -9,7 +9,6 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'model_catalog.dart';
-
 /// What went wrong while installing a model.
 class ModelInstallException implements Exception {
   ModelInstallException(this.message);
@@ -49,15 +48,22 @@ final class ModelInstallProgress {
 /// Result of [ModelStore.install].
 enum ModelInstallOutcome { installed, alreadyInstalled }
 
-/// Stores Vosk models under `<app support>/walsey_models/<model id>`.
+/// Stores offline models under `<app support>/walsey_models/<model id>`.
 ///
 /// Nothing here runs at startup. [install] is the only network call in the
-/// voice testbed and only happens after the user presses "Install" in the model
-/// manager; the typed-command flow never touches this class.
+/// voice testbed and only happens after the user presses "Install" in the
+/// model manager; the typed-command flow never touches this class.
 ///
-/// Validity means what Vosk itself requires: `am/final.mdl` exists inside the
-/// model directory. A missing marker is reported as "not installed" so the UI
-/// can offer a reinstall instead of crashing during recognition.
+/// Validity depends on the model kind: a Vosk archive is a directory that
+/// contains `am/final.mdl`; a Whisper GGUF entry is a single file of exactly
+/// the published size whose header starts with the GGUF/ggml magic. Anything
+/// else is reported as "not installed" so the UI can offer a reinstall
+/// instead of crashing during recognition.
+///
+/// Whisper models may also live next to the executable under `models/` — a
+/// Windows developer convenience wired up by `tools/fetch_whisper_windows.ps1`
+/// and copied into the build output by CMake. An explicitly installed copy in
+/// the app support folder always wins.
 class ModelStore {
   ModelStore({
     Future<Directory> Function()? baseDirectory,
@@ -92,16 +98,88 @@ class ModelStore {
     return directory;
   }
 
-  /// Absolute model path accepted by `vosk_model_new`, or `null` when the
-  /// model is not installed (or incomplete).
+  /// Absolute model path accepted by the engine, or `null` when the model
+  /// is not installed (or incomplete).
   Future<String?> installedModelPath(SpeechModel model) async {
     final base = await baseDirectory();
     final directory = Directory(p.join(base.path, folderName, model.id));
-    final marker = File(p.join(directory.path, 'am', 'final.mdl'));
-    if (!await marker.exists()) {
+    switch (model.kind) {
+      case ModelKind.voskArchive:
+        final marker = File(p.join(directory.path, 'am', 'final.mdl'));
+        if (!await marker.exists()) {
+          return null;
+        }
+        return directory.path;
+      case ModelKind.whisperGgml:
+        final fileName = model.modelFileName;
+        if (fileName == null) {
+          throw StateError('Whisper model ${model.id} has no file name.');
+        }
+        final installed = File(p.join(directory.path, fileName));
+        if (await _isValidWhisperFile(installed, model)) {
+          return installed.path;
+        }
+        final bundled = _bundledWhisperFile(fileName);
+        if (bundled != null && await _isValidWhisperFile(bundled, model)) {
+          return bundled.path;
+        }
+        return null;
+    }
+  }
+
+  /// `<exe directory>/models/<fileName>` — where the Windows developer setup
+  /// places a model copy. `null` off Windows.
+  File? _bundledWhisperFile(String fileName) {
+    if (!Platform.isWindows) {
       return null;
     }
-    return directory.path;
+    final executable = Platform.resolvedExecutable;
+    final index = executable.lastIndexOf(Platform.pathSeparator);
+    if (index <= 0) {
+      return null;
+    }
+    return File(
+      p.join(executable.substring(0, index), 'models', fileName),
+    );
+  }
+
+  /// Size must match the published size exactly and the header must carry a
+  /// known model magic, so a truncated or foreign file is reported as "not
+  /// installed" instead of crashing the engine later.
+  ///
+  /// ggml model files store their magic as a little-endian uint32: the
+  /// `ggml-base.en.bin` files in the ggerganov/whisper.cpp repository start
+  /// with the bytes `6C 6D 67 67` ('ggml' in LE order), while GGUF containers
+  /// carry plain 'GGUF' ASCII.
+  Future<bool> _isValidWhisperFile(File file, SpeechModel model) async {
+    try {
+      if (!await file.exists() || await file.length() != model.archiveSizeBytes) {
+        return false;
+      }
+      final handle = await file.open();
+      try {
+        final header = await handle.read(4);
+        return _bytesEqual(header, const [0x47, 0x47, 0x55, 0x46]) || // GGUF
+            _bytesEqual(header, const [0x67, 0x67, 0x6d, 0x6c]) || // 'ggml'
+            _bytesEqual(header, const [0x6c, 0x6d, 0x67, 0x67]); // ggml LE
+      } finally {
+        await handle.close();
+      }
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  static bool _bytesEqual(List<int> actual, List<int> expected) {
+    if (actual.length != expected.length) {
+      return false;
+    }
+    for (var i = 0; i < expected.length; i++) {
+      if (actual[i] != expected[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   Future<bool> isInstalled(SpeechModel model) async =>
@@ -120,6 +198,9 @@ class ModelStore {
   }) async {
     if (await isInstalled(model)) {
       return ModelInstallOutcome.alreadyInstalled;
+    }
+    if (model.kind == ModelKind.whisperGgml) {
+      return _installWhisperFile(model, onProgress, isCancelled);
     }
     final root = await modelsDirectory();
     final downloads = Directory(p.join(root.path, '.downloads'));
@@ -196,6 +277,75 @@ class ModelStore {
     final base = await baseDirectory();
     final directory = Directory(p.join(base.path, folderName, model.id));
     await _deleteIfExists(directory);
+  }
+
+  /// Single-file install for Whisper GGUF models: stream to a staged file,
+  /// verify the published size plus MD5 and SHA-256, then move it into place.
+  ///
+  /// The staged file lives inside the model root so the final rename stays on
+  /// one volume, which keeps the swap atomic.
+  Future<ModelInstallOutcome> _installWhisperFile(
+    SpeechModel model,
+    void Function(ModelInstallProgress progress)? onProgress,
+    bool Function()? isCancelled,
+  ) async {
+    final fileName = model.modelFileName;
+    if (fileName == null) {
+      throw ModelInstallException(
+        'Whisper model ${model.id} has no file name to install.',
+      );
+    }
+    final root = await modelsDirectory();
+    final downloads = Directory(p.join(root.path, '.downloads'));
+    await downloads.create(recursive: true);
+    final staged = File(p.join(downloads.path, '$fileName.download'));
+    try {
+      await _download(model, staged, onProgress, isCancelled);
+      if (isCancelled?.call() ?? false) {
+        throw const ModelInstallCancelled();
+      }
+      onProgress?.call(
+        ModelInstallProgress(
+          phase: ModelInstallPhase.verifying,
+          receivedBytes: model.archiveSizeBytes,
+          totalBytes: model.archiveSizeBytes,
+        ),
+      );
+      final length = await staged.length();
+      if (length != model.archiveSizeBytes) {
+        throw ModelInstallException(
+          'The downloaded model is $length bytes but the published size is '
+          '${model.archiveSizeBytes}. Delete it and try again.',
+        );
+      }
+      final md5Digest = await md5.bind(staged.openRead()).first;
+      if (md5Digest.toString() != model.archiveMd5) {
+        throw ModelInstallException(
+          'The downloaded model is corrupt (MD5 $md5Digest does not match '
+          '${model.archiveMd5}). Delete it and try again.',
+        );
+      }
+      final sha256Digest = await sha256.bind(staged.openRead()).first;
+      if (sha256Digest.toString() != model.modelSha256) {
+        throw ModelInstallException(
+          'The downloaded model is corrupt (SHA-256 $sha256Digest does not '
+          'match ${model.modelSha256}). Delete it and try again.',
+        );
+      }
+      final target = Directory(p.join(root.path, model.id));
+      if (!await target.exists()) {
+        await target.create(recursive: true);
+      }
+      final destination = File(p.join(target.path, fileName));
+      if (await destination.exists()) {
+        await destination.delete();
+      }
+      await staged.rename(destination.path);
+      return ModelInstallOutcome.installed;
+    } finally {
+      await _deleteIfExists(staged);
+      await _deleteIfEmpty(downloads);
+    }
   }
 
   Future<void> _download(

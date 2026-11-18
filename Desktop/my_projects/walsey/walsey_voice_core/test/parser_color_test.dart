@@ -106,10 +106,15 @@ void main() {
     }
   });
 
-  test('colour in a question is not executed', () {
+  test('a colour question is a status inquiry, never a command', () {
+    // Deliberate change: this used to be refused as a question. It is now a
+    // queryStatus intent so the app can say the state is unknown; it can
+    // never become a colour write.
+    final result = VoiceCommandParser().parse('what color are the lights');
+    expect(result, isA<VoiceCommandResult>());
     expect(
-      failureFor('what color are the lights').kind,
-      VoiceFailureKind.unsupported,
+      (result as VoiceCommandResult).command.intent,
+      VoiceIntent.queryStatus,
     );
   });
 

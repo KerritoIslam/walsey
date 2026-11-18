@@ -46,3 +46,14 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Stage 2 Windows: native Vosk DLLs and whisper.cpp DLLs + ggml-base.en model,
+# fetched by tools/fetch_vosk_windows.ps1 / tools/fetch_whisper_windows.ps1.
+# Third-party binaries and the ~141 MB model are not committed.
+/windows/vosk/
+/windows/whisper/
+
+# Stage 2 Android: whisper.cpp .so files built by tools/build_whisper_android.ps1.
+# Third-party binaries are not committed; run the script to build them.
+/android/app/src/main/jniLibs-whisper/
+/android/app/.cxx/

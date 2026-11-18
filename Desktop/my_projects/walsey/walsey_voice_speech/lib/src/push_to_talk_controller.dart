@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:walsey_voice_core/walsey_voice_core.dart';
 
+import 'diagnostics/latency.dart';
 import 'model/model_catalog.dart';
 
 /// Where the current interpretation came from.
@@ -65,6 +66,7 @@ class PushToTalkController extends ChangeNotifier {
     VoiceCommandParser? parser,
     SpeechLanguage language = SpeechLanguage.defaultLanguage,
     this.recognitionTimeout = const Duration(seconds: 10),
+    this.onError,
   }) : _recognizer = recognizer,
        _parser = parser ?? VoiceCommandParser(),
        _language = language {
@@ -77,6 +79,10 @@ class PushToTalkController extends ChangeNotifier {
   /// How long [PushToTalkStatus.recognizing] may last before the session is
   /// declared failed. Prevents a dead engine from leaving the UI stuck.
   final Duration recognitionTimeout;
+
+  /// Receives the original startup/recognition exception and stack trace for
+  /// host-app diagnostics. The user-facing error remains in [errorMessage].
+  final void Function(Object error, StackTrace stackTrace)? onError;
 
   StreamSubscription<SpeechRecognitionEvent>? _eventSubscription;
   Timer? _timeoutTimer;
@@ -92,6 +98,18 @@ class PushToTalkController extends ChangeNotifier {
   String? _notice;
   bool _disposed = false;
   int _sessionGeneration = 0;
+
+  /// Wall clock for the current session, started when the user presses.
+  /// Marks are plain elapsed durations; no stage is ever estimated.
+  Stopwatch? _latencyClock;
+  Duration? _markEngineReady;
+  Duration? _markFirstAudio;
+  Duration? _markStop;
+  Duration? _markTranscript;
+  VoiceLatency? _latency;
+
+  /// Measured latency of the most recent session, or `null` before one ran.
+  VoiceLatency? get latency => _latency;
 
   /// Current session state.
   PushToTalkStatus get status => _status;
@@ -142,7 +160,8 @@ class PushToTalkController extends ChangeNotifier {
   /// state change; results arrive through notifications/events.
   Future<void> toggle() async {
     if (_status.isActive) {
-      if (_status == PushToTalkStatus.listening) {
+      if (_status == PushToTalkStatus.listening ||
+          _status == PushToTalkStatus.initializing) {
         await stopListening();
       }
       return;
@@ -158,6 +177,7 @@ class PushToTalkController extends ChangeNotifier {
     }
     final generation = ++_sessionGeneration;
     _clearSessionData();
+    _latencyClock = Stopwatch()..start();
     _status = PushToTalkStatus.initializing;
     _notice = null;
     notifyListeners();
@@ -165,7 +185,8 @@ class PushToTalkController extends ChangeNotifier {
     final SpeechAvailability availability;
     try {
       availability = await _recognizer.initialize(languageId: _language.id);
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      onError?.call(error, stackTrace);
       _fail(
         generation,
         SpeechFailureKind.initializationFailed,
@@ -186,12 +207,18 @@ class PushToTalkController extends ChangeNotifier {
         _fail(generation, kind, message);
         return;
     }
+    // Model lookup/load and engine spawn are done. Permission, recognizer
+    // start and recorder open still happen below; the first audio chunk
+    // (SpeechSessionStarted) marks the end of that second stage, so recorder
+    // open time is not hidden inside "engine ready".
+    _markEngineReady = _latencyClock?.elapsed;
     try {
       await _recognizer.start(languageId: _language.id);
     } on StateError catch (error) {
       _fail(generation, SpeechFailureKind.alreadyRunning, error.message);
       return;
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      onError?.call(error, stackTrace);
       _fail(
         generation,
         SpeechFailureKind.recognitionFailed,
@@ -202,26 +229,33 @@ class PushToTalkController extends ChangeNotifier {
     if (!_isCurrent(generation)) {
       return;
     }
-    // The recognizer emits SpeechSessionStarted; this fallback only covers an
-    // adapter that returns without emitting it.
-    if (_status == PushToTalkStatus.initializing) {
-      _status = PushToTalkStatus.listening;
-      notifyListeners();
-    }
+    // SpeechSessionStarted (emitted on the first audio chunk) will drive the
+    // transition from initialising to listening. No auto-transition here: the
+    // UI stays in 'initialising' while the capture device is opening (~750 ms
+    // on Windows), which is the honest state — the microphone is not yet
+    // delivering audio.
   }
 
   /// Ends the running session and waits for the final transcript event.
+  ///
+  /// Accepted from both [PushToTalkStatus.listening] and
+  /// [PushToTalkStatus.initializing]: a user may tap Stop during the
+  /// capture-device open delay (~750 ms on Windows).
   Future<void> stopListening() async {
-    if (_disposed || _status != PushToTalkStatus.listening) {
+    if (_disposed ||
+        (_status != PushToTalkStatus.listening &&
+            _status != PushToTalkStatus.initializing)) {
       return;
     }
     final generation = _sessionGeneration;
+    _markStop ??= _latencyClock?.elapsed;
     _status = PushToTalkStatus.recognizing;
     notifyListeners();
     _armTimeout(generation);
     try {
       await _recognizer.stop();
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      onError?.call(error, stackTrace);
       _fail(
         generation,
         SpeechFailureKind.recognitionFailed,
@@ -330,6 +364,7 @@ class PushToTalkController extends ChangeNotifier {
     }
     switch (event) {
       case SpeechSessionStarted():
+        _markFirstAudio ??= _latencyClock?.elapsed;
         if (_status == PushToTalkStatus.initializing) {
           _status = PushToTalkStatus.listening;
           notifyListeners();
@@ -348,11 +383,15 @@ class PushToTalkController extends ChangeNotifier {
         _timeoutTimer = null;
         _partialText = null;
         _finalText = text;
+        _markTranscript = _latencyClock?.elapsed;
+        final parseWatch = Stopwatch()..start();
         _interpretation = _parser.parse(text);
+        parseWatch.stop();
         _interpretationSource = InterpretationSource.speech;
         _failureKind = null;
         _errorMessage = null;
         _status = PushToTalkStatus.result;
+        _finishLatency(parseDuration: parseWatch.elapsed);
         notifyListeners();
       case SpeechNoSpeechDetected():
         if (!_status.isActive) {
@@ -379,6 +418,31 @@ class PushToTalkController extends ChangeNotifier {
       case SpeechSessionFailed(:final kind, :final message):
         _fail(_sessionGeneration, kind, message);
     }
+  }
+
+  /// Freezes the measured stages of the session that just finished.
+  ///
+  /// Only real marks are used; a stage that never happened stays `null`.
+  void _finishLatency({Duration? parseDuration}) {
+    final clock = _latencyClock;
+    if (clock == null) return;
+    clock.stop();
+    final ready = _markEngineReady;
+    final firstAudio = _markFirstAudio;
+    final stop = _markStop;
+    final transcript = _markTranscript;
+    Duration? span(Duration? from, Duration? to) =>
+        from == null || to == null || to < from ? null : to - from;
+    _latency = VoiceLatency(
+      pressToEngineReady: ready,
+      engineReadyToFirstAudio: span(ready, firstAudio),
+      pressToFirstAudio: firstAudio,
+      speechDuration: span(firstAudio, stop),
+      stopToTranscript: span(stop, transcript),
+      transcriptToParsed: parseDuration,
+      pressToInterpreted:
+          transcript == null || parseDuration == null ? null : clock.elapsed,
+    );
   }
 
   void _armTimeout(int generation) {
@@ -421,6 +485,12 @@ class PushToTalkController extends ChangeNotifier {
     _interpretationSource = null;
     _failureKind = null;
     _errorMessage = null;
+    _latency = null;
+    _latencyClock = null;
+    _markEngineReady = null;
+    _markFirstAudio = null;
+    _markStop = null;
+    _markTranscript = null;
     if (!keepStatus) {
       _status = PushToTalkStatus.idle;
     }

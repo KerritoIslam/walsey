@@ -1,0 +1,128 @@
+{
+ "color": {
+  "bg": "#0E0F14",
+  "surface": "#171923",
+  "surfaceRaised": "#1F2230",
+  "border": "#262A38",
+  "toggleOff": "#3A3F52",
+  "text": "#E8EAF2",
+  "textSecondary": "#B4BACB",
+  "textMuted": "#9AA1B5",
+  "primary": "#7B6CF6",
+  "primaryTint": "#242246",
+  "primaryText": "#B7AEFF",
+  "accentCyan": "#3DD6E8",
+  "success": "#4CC38A",
+  "successBg": "#12362A",
+  "successText": "#6FE0A8",
+  "warning": "#F2B04A",
+  "warningBg": "#3A2C10",
+  "warningText": "#F5C26B",
+  "error": "#E5646B",
+  "errorBg": "#3A1A1E",
+  "errorText": "#F59BA0"
+ },
+ "font": {
+  "family": "Inter",
+  "weights": [
+   400,
+   500,
+   600,
+   700
+  ]
+ },
+ "type": {
+  "pageTitle": {
+   "size": 24,
+   "weight": 700
+  },
+  "androidTitle": {
+   "size": 22,
+   "weight": 700
+  },
+  "sectionTitle": {
+   "size": 15,
+   "weight": 600
+  },
+  "body": {
+   "size": 14,
+   "weight": 400
+  },
+  "rowTitle": {
+   "size": 14,
+   "weight": 600
+  },
+  "caption": {
+   "size": 12,
+   "weight": 400
+  },
+  "sectionLabel": {
+   "size": 12,
+   "weight": 600,
+   "case": "upper",
+   "tracking": "0.06em"
+  },
+  "badge": {
+   "size": 11,
+   "weight": 600
+  },
+  "bottomNav": {
+   "size": 11,
+   "weight": 400
+  },
+  "display": {
+   "size": 34,
+   "weight": 700,
+   "use": "pairing code"
+  }
+ },
+ "spacing": {
+  "scale": [
+   4,
+   6,
+   8,
+   10,
+   12,
+   14,
+   16,
+   20,
+   24,
+   28
+  ],
+  "cardPadding": 16,
+  "gridGap": 14,
+  "androidScreenPadding": 16,
+  "windowsContentPadding": "24 28"
+ },
+ "radius": {
+  "badge": 6,
+  "button": 8,
+  "input": 8,
+  "card": 10,
+  "sheet": 16,
+  "pill": 16,
+  "round": "50%"
+ },
+ "size": {
+  "minTouchTarget": 44,
+  "toggle": [
+   40,
+   22
+  ],
+  "progressHeight": 6,
+  "windows": {
+   "artboard": [
+    1280,
+    800
+   ],
+   "sidebar": 210,
+   "rightPanel": 270
+  },
+  "android": {
+   "artboard": [
+    390,
+    844
+   ]
+  }
+ }
+}

@@ -35,6 +35,16 @@
 
 .PARAMETER Threads
     whisper.cpp CPU threads. Defaults to 4 so the result is reproducible.
+
+.PARAMETER BeamSize
+    whisper.cpp decoding breadth. Defaults to 1 (greedy), which is exactly what
+    the shipped app uses: `whisper_full_default_params_by_ref(0)` with the
+    greedy defaults. Pass a larger value to measure beam search, but do not
+    report those numbers as the app's baseline.
+
+.PARAMETER Prompt
+    Optional `initial_prompt` text (vocabulary hint). Omitted by default: the
+    shipped app does not set a prompt, so the baseline must not either.
 #>
 [CmdletBinding()]
 param(
@@ -42,7 +52,9 @@ param(
     [Parameter(Mandatory = $true)][string]$WhisperCli,
     [Parameter(Mandatory = $true)][string]$Model,
     [string]$OutputFile = '',
-    [int]$Threads = 4
+    [int]$Threads = 4,
+    [int]$BeamSize = 1,
+    [string]$Prompt = ''
 )
 
 Set-StrictMode -Version Latest
@@ -84,7 +96,11 @@ try {
         $previous = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
         try {
-            $log = & $WhisperCli -m $Model -f $audio -l en -t $Threads -oj -of $outBase 2>&1
+            $arguments = @('-m', $Model, '-f', $audio, '-l', 'en', '-t', $Threads, '-bs', $BeamSize, '-oj', '-of', $outBase)
+            if (-not [string]::IsNullOrWhiteSpace($Prompt)) {
+                $arguments += @('--prompt', $Prompt)
+            }
+            $log = & $WhisperCli @arguments 2>&1
         }
         finally {
             $ErrorActionPreference = $previous

@@ -112,6 +112,34 @@ void main() {
       expect(result.executionStatus, VoiceExecutionStatus.notExecuted);
     });
 
+    test('latency stages are measured, never estimated', () async {
+      await controller.startListening();
+      await pumpEventQueue();
+      expect(controller.latency, isNull);
+
+      await controller.stopListening();
+      recognizer.emit(const SpeechFinalTranscript('turn the lights on'));
+      await pumpEventQueue();
+
+      final latency = controller.latency;
+      expect(latency, isNotNull);
+      expect(latency!.pressToEngineReady, isNotNull);
+      expect(latency.engineReadyToFirstAudio, isNotNull);
+      expect(latency.pressToFirstAudio, isNotNull);
+      expect(latency.speechDuration, isNotNull);
+      expect(latency.stopToTranscript, isNotNull);
+      expect(latency.transcriptToParsed, isNotNull);
+      expect(latency.pressToInterpreted, isNotNull);
+      expect(latency.stopToTranscript!, greaterThanOrEqualTo(Duration.zero));
+      expect(
+        latency.rows.map((row) => row.$1),
+        contains('Press → interpreted'),
+      );
+
+      controller.clear();
+      expect(controller.latency, isNull);
+    });
+
     test(
       'recognized text goes through the same parser as typed text',
       () async {
@@ -353,7 +381,7 @@ void main() {
       expect(controller.selectLanguage(SpeechLanguage.algerianDarija), isTrue);
 
       expect(controller.canStart, isFalse);
-      expect(controller.notice, contains('No Vosk model exists'));
+      expect(controller.notice, contains('No offline model exists'));
     });
 
     test('language cannot change during a session', () async {

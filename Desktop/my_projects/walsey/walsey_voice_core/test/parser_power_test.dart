@@ -57,7 +57,6 @@ void main() {
       'the lights are on',
       'the lights are off',
       'lights are on',
-      'is the light on',
     ]) {
       expect(
         failureFor(phrase).kind,
@@ -65,6 +64,18 @@ void main() {
         reason: phrase,
       );
     }
+  });
+
+  test('an interrogative status question is recognized, never executed', () {
+    // Deliberate change: "is the light on" used to be refused as a question.
+    // It is now a queryStatus intent so the app can answer honestly that the
+    // protocol has no state read-back. It still cannot become a write.
+    final result = VoiceCommandParser().parse('is the light on');
+    expect(result, isA<VoiceCommandResult>());
+    expect(
+      (result as VoiceCommandResult).command.intent,
+      VoiceIntent.queryStatus,
+    );
   });
 
   test('power words without an LED subject are not an LED command', () {

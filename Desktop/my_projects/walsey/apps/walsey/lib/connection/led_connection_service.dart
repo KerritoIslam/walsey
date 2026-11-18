@@ -126,8 +126,10 @@ final class LedConnectionService {
     this.discoveryTimeout = const Duration(seconds: 20),
     this.disconnectTimeout = const Duration(seconds: 10),
     void Function(String line)? onLog,
+    void Function(CommandActivity activity)? onCommand,
   })  : _central = central,
-        _onLog = onLog {
+        _onLog = onLog,
+        _onCommand = onCommand {
     _discoveredSub = _central.discovered.listen(
       _handleDiscovered,
       onError: (Object error, StackTrace stackTrace) =>
@@ -152,6 +154,7 @@ final class LedConnectionService {
 
   final BleCentral _central;
   final void Function(String line)? _onLog;
+  final void Function(CommandActivity activity)? _onCommand;
 
   final Duration connectionTimeout;
   final Duration discoveryTimeout;
@@ -171,6 +174,10 @@ final class LedConnectionService {
   PluginLedTransport? _transport;
   LedControlService? _controls;
 
+  /// Last device that reached [AppConnectionPhase.connected] in this session.
+  /// Used only by an explicit "reconnect" request; it is never auto-connected.
+  ScannedPeripheral? _lastConnected;
+
   bool _disposed = false;
   bool _scanRequested = false;
   bool _discoveryActive = false;
@@ -183,6 +190,12 @@ final class LedConnectionService {
 
   /// Typed command API; null unless connected to a supported variant.
   LedControlService? get controls => _controls;
+
+  /// Last device that successfully reached `connected` in this app session.
+  ///
+  /// Exposed for an explicit "reconnect" request only. Nothing reconnects
+  /// automatically, and this is not persisted device state.
+  ScannedPeripheral? get lastConnectedDevice => _lastConnected;
 
   /// App-level diagnostics (also exposed in state.logs).
   void log(String line) => _log(line);
@@ -377,6 +390,7 @@ final class LedConnectionService {
               driver: driver,
               layout: supported.layout,
               log: _log,
+              onCommand: _onCommand,
             );
             _log('CONTROL API BOUND to ${supported.advertisedName} '
                 '(layout=${supported.layout.name}). Commands require an '
@@ -411,6 +425,7 @@ final class LedConnectionService {
       _driver = driver;
       _transport = transport;
       _controls = controls;
+      _lastConnected = device;
       _publish(
         phase: AppConnectionPhase.connected,
         report: report,

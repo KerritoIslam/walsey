@@ -3,25 +3,9 @@ import 'dart:typed_data';
 
 import 'package:record/record.dart';
 
-/// Microphone capture seam.
-///
-/// The recognizer only needs three things from the platform: permission, a
-/// 16-bit PCM stream, and a way to stop releasing the device. Keeping that
-/// behind an interface lets the recognition workflow be tested without a
-/// microphone or a plugin channel.
-abstract interface class AudioCapture {
-  /// Queries (and on Android requests) microphone permission.
-  Future<bool> hasPermission();
+import 'audio_capture_port.dart';
 
-  /// Opens the microphone and returns 16-bit little-endian mono PCM chunks.
-  Future<Stream<Uint8List>> startStream({required int sampleRate});
-
-  /// Closes the microphone. Safe to call when capture is not running.
-  Future<void> stop();
-
-  /// Releases plugin resources.
-  Future<void> dispose();
-}
+export 'audio_capture_port.dart';
 
 /// [AudioCapture] backed by the `record` plugin.
 ///
@@ -30,10 +14,22 @@ abstract interface class AudioCapture {
 /// and Windows implement it; the sample rate is configured explicitly so the
 /// engine's expected 16 kHz cannot drift with the OS default.
 class RecordAudioCapture implements AudioCapture {
-  RecordAudioCapture({AudioRecorder? recorder})
-    : _recorder = recorder ?? AudioRecorder();
+  RecordAudioCapture({
+    AudioRecorder? recorder,
+    this.device,
+    this.autoGain = true,
+    this.noiseSuppress = true,
+    this.echoCancel = false,
+  }) : _recorder = recorder ?? AudioRecorder();
 
   final AudioRecorder _recorder;
+  final InputDevice? device;
+  final bool autoGain;
+  final bool noiseSuppress;
+  final bool echoCancel;
+
+  /// Returns the available audio input devices on this platform.
+  Future<List<InputDevice>> listInputDevices() => _recorder.listInputDevices();
 
   @override
   Future<bool> hasPermission() => _recorder.hasPermission();
@@ -45,9 +41,10 @@ class RecordAudioCapture implements AudioCapture {
         encoder: AudioEncoder.pcm16bits,
         sampleRate: sampleRate,
         numChannels: 1,
-        echoCancel: false,
-        noiseSuppress: false,
-        autoGain: false,
+        device: device,
+        echoCancel: echoCancel,
+        noiseSuppress: noiseSuppress,
+        autoGain: autoGain,
       ),
     );
   }

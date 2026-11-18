@@ -5,6 +5,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:walsey_led_core/walsey_led_core.dart';
 
+/// One completed command attempt, for the activity ledger.
+@immutable
+final class CommandActivity {
+  const CommandActivity({
+    required this.name,
+    required this.variant,
+    required this.layout,
+    required this.result,
+  });
+
+  final String name;
+  final String variant;
+  final String layout;
+  final CommandResult result;
+}
+
 /// Typed command facade used by the UI.
 ///
 /// Keeps protocol knowledge out of widgets: the UI only names an operation and
@@ -18,18 +34,28 @@ final class LedControlService {
     required LeddmxDriver driver,
     required LeddmxLayout layout,
     required void Function(String line) log,
+    void Function(CommandActivity activity)? onCommand,
   })  : _driver = driver,
         _layout = layout,
-        _log = log;
+        _log = log,
+        _onCommand = onCommand;
 
   final LeddmxDriver _driver;
   final LeddmxLayout _layout;
   final void Function(String) _log;
+  final void Function(CommandActivity activity)? _onCommand;
 
   final ValueNotifier<bool> _busy = ValueNotifier<bool>(false);
 
   /// True while one command is in flight. The UI disables command buttons.
   ValueListenable<bool> get busy => _busy;
+
+  bool _handshakeSent = false;
+
+  /// Whether the handshake frame was written in this session. This is not a
+  /// device-authentication confirmation: the controller reply is only surfaced
+  /// by [checkPasswordStatus].
+  bool get handshakeSent => _handshakeSent;
 
   String get variantLabel =>
       _driver.variant?.advertisedName ?? '(detached)';
@@ -60,10 +86,14 @@ final class LedControlService {
       );
 
   /// Sends the authentication handshake once. Never automatic.
-  Future<CommandResult> authenticate({DateTime? now}) => _run(
-        'handshake',
-        () => _driver.authenticate(now: now),
-      );
+  Future<CommandResult> authenticate({DateTime? now}) async {
+    final result = await _run(
+      'handshake',
+      () => _driver.authenticate(now: now),
+    );
+    if (result is CommandSent) _handshakeSent = true;
+    return result;
+  }
 
   /// Sends `2A 05` and reports the documented password-status reply, if any.
   Future<PasswordQueryOutcome> checkPasswordStatus() async {
@@ -80,11 +110,14 @@ final class LedControlService {
           'layout=$layoutLabel | frame=2a 05 ff ff ff ff ff ff af');
       final outcome = await _driver.checkPasswordStatus();
       _logResult('password query', outcome.write);
+      _report('password query', outcome.write);
       _log(outcome.status == null
-          ? 'PASSWORD REPLY: none within timeout. The query was sent, but '
-              'nothing confirms the controller accepted the password.'
-          : 'PASSWORD REPLY: ${outcome.status!.name} '
-              '(documented meaning; reply is the only protocol response)');
+          ? 'HARDWARE RESPONSE: PASSWORD REPLY: none within timeout. The '
+              'query was sent, but nothing confirms the controller accepted '
+              'the password.'
+          : 'HARDWARE RESPONSE: PASSWORD REPLY: ${outcome.status!.name} '
+              '(documented meaning; this reply is the only protocol response '
+              'the controller sends)');
       return outcome;
     } catch (error) {
       _log('COMMAND password query FAILED unexpectedly: $error');
@@ -109,6 +142,7 @@ final class LedControlService {
           'write=withResponse');
       final result = await send();
       _logResult(name, result);
+      _report(name, result);
       return result;
     } catch (error) {
       _log('COMMAND $name FAILED unexpectedly: $error');
@@ -128,6 +162,19 @@ final class LedControlService {
       case CommandFailed(:final message):
         _log('RESULT $name: FAILED | $message');
     }
+  }
+
+  void _report(String name, CommandResult result) {
+    final onCommand = _onCommand;
+    if (onCommand == null) return;
+    onCommand(
+      CommandActivity(
+        name: name,
+        variant: variantLabel,
+        layout: layoutLabel,
+        result: result,
+      ),
+    );
   }
 
   void dispose() {
