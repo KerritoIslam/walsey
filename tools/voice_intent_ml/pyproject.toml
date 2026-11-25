@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "walsey-intent-ml"
+version = "0.1.0"
+description = "Phase 1 offline audio-feature pipeline for Walsey voice intent research"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "Proprietary" }
+dependencies = [
+  "numpy>=2.1",
+  "scikit-learn>=1.6",
+  "scipy>=1.14",
+  "joblib>=1.4",
+]
+
+[project.optional-dependencies]
+embedding = [
+  "torch>=2.6",
+  "sentence-transformers>=3.3",
+  "huggingface-hub>=0.27",
+]
+dev = [
+  "pytest>=8.3",
+]
+
+[project.scripts]
+walsey-intent = "walsey_intent.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "run_model: needs a real downloaded embedding model and torch; enable with --run-model",
+]

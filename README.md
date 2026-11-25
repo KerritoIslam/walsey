@@ -27,6 +27,7 @@ see `docs/voice_stage1.md` and `docs/voice_stage2.md`.
 | `docs/voice_stage2.md` | Voice Stage 2: Whisper/Vosk decision, offline semantics, models, manual checklist |
 | `docs/voice_accuracy.md` | Measured recognition accuracy, decoder bias, fallback comparison |
 | `docs/voice_assistant_report.md` | Hold-to-talk fix, failure analysis, wake word, background listening, builds |
+| `docs/voice_intent_ml.md` | Phase 1 raw-audio log-Mel features for voice-intent experiments |
 | `docs/wake_word.md` | Wake-word benchmarks and why detection stays disabled |
 | `docs/music_mode.md`, `docs/led_segments.md` | Analysed-but-unsupported features |
 | `apps/walsey/README.md` | How to run the app and the controlled first hardware test |
@@ -42,6 +43,7 @@ see `docs/voice_stage1.md` and `docs/voice_stage2.md`.
 | `walsey_voice_speech/` | Flutter voice adapter: whisper.cpp FFI in a worker isolate (primary) with a Vosk fallback, `record` capture, explicit model download/extract, two disabled wake-word detectors | Stage 2 code complete, unit tests green |
 | `apps/walsey_voice_test/` | Flutter voice testbed: speak offline or type, inspect intent/parameters/validation; no BLE and no execution | Stage 2 code complete, widget tests green |
 | `tools/ble_probe/` | Stage 1 read-only probe. Frozen as a reference; it sends no frames and does not depend on the new packages | Unchanged |
+| `tools/voice_intent_ml/` | Python audio-signal preprocessing and log-Mel feature extraction; does not use transcripts | Phase 1 audio pipeline |
 
 ## Verification status (be honest about this)
 
@@ -55,6 +57,7 @@ see `docs/voice_stage1.md` and `docs/voice_stage2.md`.
 | `walsey_voice_core`: `dart analyze` / `dart test` | **PASS (2026-11-06):** analysis clean, **154/154 tests** pass |
 | `walsey_voice_speech`: `flutter analyze` / `flutter test` | **PASS (2026-11-06):** analysis clean, **213/213 tests** pass (fake engine/capture, loopback HTTP; no microphone or internet) |
 | `apps/walsey_voice_test`: `flutter analyze` / `flutter test` | **PASS (2026-11-06):** analysis clean, **21/21 widget tests** pass |
+| `tools/voice_intent_ml`: Python audio-feature tests | **PASS (2026-11-25):** 72 tests; local WAV converted to a `64 x 300` float32 log-Mel matrix. No labeled audio corpus or classifier yet |
 | `apps/walsey_voice_test`: Android debug APK | **PASS (2026-10-26):** contains `lib/{arm64-v8a,armeabi-v7a,x86_64}/libvosk.so` and the whisper JNI libs; declares `RECORD_AUDIO`, `INTERNET`, minSdk 24 |
 | `apps/walsey_voice_test`: Windows debug build | **PASS (2026-10-26):** `flutter build windows --debug` → `build/windows/x64/runner/Debug/walsey_voice_test.exe`; the Vosk DLLs and `models/ggml-base.en.bin` are copied next to the exe, and the build also succeeds when `windows/vosk/` is absent (speech then reports a native-library error) |
 | `apps/walsey`: Windows debug build | **PASS (2026-11-06)** with `nuget.exe` on `PATH` and the checked-in app-side CMake `/await` workaround for the BLE plugins |

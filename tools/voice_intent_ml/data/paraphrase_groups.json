@@ -1,0 +1,90 @@
+{
+  "description": "Phrase groups used to check that the representation places different formulations of the same command near each other. Sentences resolve by exact original first, then by canonical text, so punctuation/case variants are allowed.",
+  "groups": [
+    {
+      "name": "power-on paraphrases",
+      "intent": "powerOn",
+      "sentences": [
+        "turn the lights on",
+        "switch on the lights",
+        "Turn the LED on.",
+        "Power up the lights",
+        "Please enable the lights",
+        "Get the lights working"
+      ]
+    },
+    {
+      "name": "polite/request power-on",
+      "intent": "powerOn",
+      "sentences": [
+        "Could you switch the lighting on",
+        "Can you turn the lights on",
+        "Let's get the lights working"
+      ]
+    },
+    {
+      "name": "power-off paraphrases",
+      "intent": "powerOff",
+      "sentences": [
+        "turn the lights off",
+        "switch off the lights",
+        "Turn off the LED.",
+        "Switch off all the lights."
+      ]
+    },
+    {
+      "name": "blue formulations",
+      "intent": "setColor",
+      "sentences": [
+        "make the lights blue",
+        "walsey make the lights blue",
+        "I want to make the lights blue",
+        "Walsey, make the lights blue."
+      ]
+    },
+    {
+      "name": "red formulations",
+      "intent": "setColor",
+      "sentences": [
+        "make the lights red",
+        "hey walsey make the lights red"
+      ]
+    },
+    {
+      "name": "fifty percent formulations",
+      "intent": "setBrightness",
+      "sentences": [
+        "set brightness to 50 percent",
+        "Set brightness to 50%",
+        "set the brightness to half",
+        "set brightness to fifty percent"
+      ]
+    },
+    {
+      "name": "effect 12 formulations",
+      "intent": "applyEffect",
+      "sentences": [
+        "activate effect 12",
+        "hey walsey activate effect 12"
+      ]
+    },
+    {
+      "name": "increase brightness",
+      "intent": "increaseBrightness",
+      "sentences": [
+        "increase the brightness",
+        "make the lights brighter",
+        "turn up the brightness"
+      ]
+    },
+    {
+      "name": "decrease brightness",
+      "intent": "decreaseBrightness",
+      "sentences": [
+        "decrease the brightness",
+        "make the lights dimmer",
+        "turn down the brightness"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "description": "Pairs that differ only in a numeric or colour parameter. 'different' means the command means something else and the vector should ideally move; 'similar' means same value in another surface form. These are measurements, not pass/fail thresholds: Phase 1 records where a sentence embedding blurs exact parameters.",
+  "pairs": [
+    {
+      "name": "brightness 20 vs 50",
+      "left": "set brightness to 20 percent",
+      "right": "set brightness to 50 percent",
+      "expectation": "different"
+    },
+    {
+      "name": "brightness 50 vs 100",
+      "left": "set brightness to 50 percent",
+      "right": "set brightness to 100 percent",
+      "expectation": "different"
+    },
+    {
+      "name": "brightness 0 vs 100",
+      "left": "set brightness to 0 percent",
+      "right": "set brightness to 100 percent",
+      "expectation": "different"
+    },
+    {
+      "name": "brightness 20 vs 75",
+      "left": "set brightness to 20 percent",
+      "right": "set the brightness to 75 percent",
+      "expectation": "different"
+    },
+    {
+      "name": "effect 5 vs 12",
+      "left": "activate effect 5",
+      "right": "activate effect 12",
+      "expectation": "different"
+    },
+    {
+      "name": "effect 5 vs 210",
+      "left": "activate effect 5",
+      "right": "activate effect 210",
+      "expectation": "different"
+    },
+    {
+      "name": "effect 3 vs 100",
+      "left": "turn on effect 3",
+      "right": "set effect 100",
+      "expectation": "different"
+    },
+    {
+      "name": "red vs blue",
+      "left": "make the lights red",
+      "right": "make the lights blue",
+      "expectation": "different"
+    },
+    {
+      "name": "green vs magenta",
+      "left": "make the lights green",
+      "right": "make the lights magenta",
+      "expectation": "different"
+    },
+    {
+      "name": "colour vs brightness",
+      "left": "make the lights blue",
+      "right": "set brightness to 50 percent",
+      "expectation": "different"
+    },
+    {
+      "name": "increase vs decrease",
+      "left": "increase the brightness",
+      "right": "decrease the brightness",
+      "expectation": "different"
+    },
+    {
+      "name": "brighter vs dimmer",
+      "left": "make the lights brighter",
+      "right": "make the lights dimmer",
+      "expectation": "different"
+    },
+    {
+      "name": "50 percent vs 50%",
+      "left": "set brightness to 50 percent",
+      "right": "Set brightness to 50%",
+      "expectation": "similar"
+    },
+    {
+      "name": "fifty word vs 50 digits",
+      "left": "set brightness to fifty percent",
+      "right": "set brightness to 50 percent",
+      "expectation": "similar"
+    },
+    {
+      "name": "violet alias vs purple",
+      "left": "make the lights violet",
+      "right": "make the lights purple",
+      "expectation": "similar"
+    },
+    {
+      "name": "turquoise alias vs cyan",
+      "left": "make the lights turquoise",
+      "right": "make the lights cyan",
+      "expectation": "similar"
+    }
+  ]
+}
