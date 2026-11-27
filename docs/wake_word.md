@@ -8,7 +8,9 @@ Assistant shows an honest "not installed" explanation instead of a fake
 listening control.
 
 This document records what was actually built, what was measured, and what is
-still blocked.
+still blocked. The concrete implementation plan — a sherpa-onnx keyword spotter
+first, an openWakeWord-style custom model as the production alternative — is
+[`planned/onnx-wake-word.md`](planned/onnx-wake-word.md).
 
 ## Current behaviour
 

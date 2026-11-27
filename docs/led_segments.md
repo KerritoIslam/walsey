@@ -2,7 +2,8 @@
 
 Status: **not implemented, deliberately.** The Studio page lists segments as an
 unsupported feature. No segment frame exists in this repository, and no
-segment behaviour has been observed on the target controller.
+segment behaviour has been observed on the target controller. The conditions for
+implementing it are in [`planned/led-segments.md`](planned/led-segments.md).
 
 ## What "segments" would mean
 

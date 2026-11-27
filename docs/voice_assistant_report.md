@@ -240,6 +240,9 @@ device run.
 
 ## 7. Build and test results
 
+These are the implementation-time counts from 2026-11-06. The current counts
+(re-run 2026-11-27) are kept in the root [`README.md`](../README.md).
+
 Run sequentially, Windows 11.
 
 | Package | Analyze | Tests |

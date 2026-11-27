@@ -3,7 +3,8 @@
 Phase 1 converts the **voice signal** into numeric acoustic features. It does
 not convert speech to text for the ML path, train a classifier, access BLE, or
 execute commands. Existing transcript-based command interpretation remains
-unchanged.
+unchanged. The path from here to a shipped classifier is
+[`planned/voice-intent-ml.md`](planned/voice-intent-ml.md).
 
 ## Existing voice path and integration point
 

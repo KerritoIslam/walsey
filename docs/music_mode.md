@@ -2,7 +2,8 @@
 
 Status: **not implemented, no audio is sent to the LEDs.** This document records
 what a music-reactive mode would need, what was prototyped (an offline spectrum
-analyzer with tests), and exactly which questions require hardware.
+analyzer with tests), and exactly which questions require hardware. The staged
+implementation plan is [`planned/music-reactive-mode.md`](planned/music-reactive-mode.md).
 
 ## What exists
 

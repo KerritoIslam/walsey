@@ -1,0 +1,31 @@
+# "Walsey" keyword variants for the sherpa-onnx streaming keyword spotter.
+#
+# Format: <model tokens...> [<boost>] [#<threshold>] [@<display name>]
+#   tokens     CMUdict phones taken from the model's tokens.txt
+#   :<float>   boosting score (higher = easier to fire)
+#   #<float>   trigger threshold in 0..1 (lower = easier to fire)
+#   @<name>    original spelling reported back by KeywordSpotter.getResult()
+#
+# The phones were derived empirically, not guessed: the model was run as a
+# tiny phone-level recogniser over synthesised "Walsey" utterances and the
+# emitted phone strings were recorded. "Walsey" is not in any dictionary, so a
+# single canonical spelling is not enough - TTS voices alone produced
+# W AY1 L S IY1, W EH1 L S IY1 and V AE1 L S OW0.
+#
+# Deliberately excluded: `V AE1 L S OW0` ("VAL-so"). It is what one TTS voice
+# emitted, but it is far enough from the intended pronunciation that shipping
+# it would mostly add false activations. It is recorded in
+# docs/wake_word.md instead.
+#
+# Provisional values: `:1.5 #0.25` reproduced 5/5 synthetic positives and
+# 1/3 hard negatives in the first reference sweep. The shipped numbers are
+# replaced by the calibrated sweep in docs/voice_accuracy.md; if this file
+# changes, its digest in `wakeWordModelV1` must change too.
+
+W AO1 L S IY0 :1.5 #0.25 @WALSEY
+W AO1 L S IY1 :1.5 #0.25 @WALSEY
+W AA1 L S IY0 :1.5 #0.25 @WALSEY
+W AA1 L S IY1 :1.5 #0.25 @WALSEY
+W AY1 L S IY1 :1.5 #0.25 @WALSEY
+W EH1 L S IY1 :1.5 #0.25 @WALSEY
+W AO1 L Z IY0 :1.5 #0.25 @WALSEY

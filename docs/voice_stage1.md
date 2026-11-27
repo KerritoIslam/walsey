@@ -14,7 +14,7 @@ The three-stage roadmap remains:
 |---|---|---|
 | 1 | Text → intent → validated parameters; testing UI | implemented |
 | 2 | Push-to-talk speech recognition feeding the Stage 1 parser | **implemented now** |
-| 3 | Wake word, LED execution through `LedControlService`, platform actions | not started |
+| 3 | Wake word, LED execution through `LedControlService`, platform actions | partially in the main app: plan execution is wired; wake word is implemented but blocked on a model/backend; platform actions are not started |
 
 ## Packages
 
@@ -25,23 +25,26 @@ walsey_voice_speech/          Flutter adapter: whisper.cpp (primary) + Vosk
 apps/walsey_voice_test/       Flutter testbed: speech or text + interpretation.
 ```
 
-The main app (`apps/walsey`) and both LED packages are unchanged.
+The voice packages still do not import either LED package. LED execution lives
+only in the main app (`apps/walsey/lib/voice/voice_plan_executor.dart`), which
+maps validated plan steps onto the existing `LedControlService`.
 
 Why the voice core does not depend on `walsey_led_core`: the assistant will
 eventually route several domains (LED, Windows system, applications, audio).
 Keeping the core domain-neutral avoids making system commands depend on the LED
-model. A future Stage 3 adapter maps `VoiceColor` → `RgbColor`,
-`VoiceBrightness` → `BrightnessLevel` and `VoiceEffect` → `LedEffect`, then
-calls the existing `LedControlService`. No BLE byte ever originates in the voice
-layer.
+model. In the main app, the plan executor maps validated steps onto the existing
+typed LED facade (`VoiceColor` → `RgbColor`, `VoiceBrightness` →
+`BrightnessLevel`, `VoiceEffect` → `LedEffect`). The pure voice packages never
+perform this mapping, and no BLE byte ever originates in the voice layer.
 
 ```
 apps/walsey_voice_test
   ↓ VoiceResult (typed, display-only)
 walsey_voice_core
   normalize → parse → validate → registry authorization
-  ↓ (Stage 3, not implemented)
-future adapter → apps/walsey LedControlService → LeddmxDriver → BLE
+  ↓ (main app only)
+apps/walsey VoicePlanExecutor → LedControlService
+  → LeddmxDriver → WriteQueue → BLE
 ```
 
 ## Command model
@@ -62,8 +65,10 @@ the UI (`powerOn`, `setColor`, …). Parameters are sealed classes, not maps:
   or `invalidParameter`, with a user-facing explanation and, where relevant,
   the intent that was recognized.
 
-Parsing never implies execution. The execution row in the UI always reads
-"Not executed — Stage 2 testing mode" until a real executor exists.
+Parsing never implies execution. The voice testbed and both voice packages have
+no executor, so their execution row stays "Not executed". Only the main app
+executes a recognized plan, through its own `VoicePlanExecutor`; typed input is
+still never executed there.
 
 ## Supported grammar
 
@@ -140,8 +145,9 @@ flutter run -d <android-device-id>      # or -d windows
 ```
 
 No BLE, microphone, network or API key is required. Because the testbed has no
-BLE plugin, it is not affected by the Windows plugin build blocker described in
-the root README.
+BLE plugin, it is not affected by the app-side Windows CMake `/await` workaround
+described in [`how-it-works/development.md`](how-it-works/development.md); its
+Windows build still needs the native speech libraries for real recognition.
 
 ## Limitations
 

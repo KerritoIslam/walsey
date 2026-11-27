@@ -1,0 +1,204 @@
+{
+  "selectors_matched": {
+    "li.section": 8,
+    "[data-for=section]": 16,
+    "li.activity": 8,
+    "[data-for=cmitem]": 8
+  },
+  "body_class_hints": [
+    "format-topics",
+    "path-course",
+    "path-course-view",
+    "pagelayout-course",
+    "theme",
+    "uses-drawers"
+  ],
+  "sections": [
+    {
+      "id": "course-index-section-874",
+      "title": "Complexity and Problem Solving",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-1295",
+      "title": "Contact sheet",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-875",
+      "title": "Course Objectives",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-1296",
+      "title": "Table of Contents",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-876",
+      "title": "Introduction",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-877",
+      "title": "Complexity of Algorithms",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-878",
+      "title": "Complexity of problems",
+      "activities": []
+    },
+    {
+      "id": "course-index-section-1297",
+      "title": "Participate in the improvement of the course",
+      "activities": []
+    },
+    {
+      "id": "section-0",
+      "title": "Sélectionner la section Complexity and Problem Solving Replier Déplier Complexity and Problem Solving",
+      "activities": [
+        {
+          "cmid": 1486,
+          "modtype": "forum",
+          "name": "Forum CPS",
+          "href_path": "/mod/forum/view.php?id=1486",
+          "details": null,
+          "icon_src_tail": [
+            "1795009705",
+            "monologo?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    },
+    {
+      "id": "section-1",
+      "title": "Sélectionner la section Contact sheet Replier Déplier Contact sheet",
+      "activities": [
+        {
+          "cmid": 2390,
+          "modtype": "label",
+          "name": null,
+          "href_path": null,
+          "details": null,
+          "icon_src_tail": null,
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    },
+    {
+      "id": "section-2",
+      "title": "Sélectionner la section Course Objectives Replier Déplier Course Objectives",
+      "activities": [
+        {
+          "cmid": 2309,
+          "modtype": "label",
+          "name": null,
+          "href_path": null,
+          "details": null,
+          "icon_src_tail": null,
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    },
+    {
+      "id": "section-3",
+      "title": "Sélectionner la section Table of Contents Replier Déplier Table of Contents",
+      "activities": []
+    },
+    {
+      "id": "section-4",
+      "title": "Sélectionner la section Introduction Replier Déplier Introduction",
+      "activities": [
+        {
+          "cmid": 2312,
+          "modtype": "resource",
+          "name": "Introduction to complexity and problem solving PDF",
+          "href_path": "/mod/resource/view.php?id=2312",
+          "details": "743.4 Ko",
+          "icon_src_tail": [
+            "f",
+            "pdf?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    },
+    {
+      "id": "section-5",
+      "title": "Sélectionner la section Complexity of Algorithms Replier Déplier Complexity of Algorithms",
+      "activities": [
+        {
+          "cmid": 2314,
+          "modtype": "resource",
+          "name": "Algorithmic Complexity Chapter Course PDF",
+          "href_path": "/mod/resource/view.php?id=2314",
+          "details": "1.6 Mo",
+          "icon_src_tail": [
+            "f",
+            "pdf?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        },
+        {
+          "cmid": 3109,
+          "modtype": "resource",
+          "name": "Worksheet N°1 (Algorithm Complexity) PDF",
+          "href_path": "/mod/resource/view.php?id=3109",
+          "details": "273.8 Ko",
+          "icon_src_tail": [
+            "f",
+            "pdf?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        },
+        {
+          "cmid": 3347,
+          "modtype": "resource",
+          "name": "Solution for exercises in the worksheet N°1 (Algorithm Complexity) PDF",
+          "href_path": "/mod/resource/view.php?id=3347",
+          "details": "488.5 Ko",
+          "icon_src_tail": [
+            "f",
+            "pdf?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    },
+    {
+      "id": "section-6",
+      "title": "Sélectionner la section Complexity of problems Replier Déplier Complexity of problems Non disponible",
+      "activities": []
+    },
+    {
+      "id": "section-7",
+      "title": "Sélectionner la section Participate in the improvement of the course Replier Déplier Participate in the improvement of the course",
+      "activities": [
+        {
+          "cmid": 2397,
+          "modtype": "feedback",
+          "name": "Your opinion interests us",
+          "href_path": "/mod/feedback/view.php?id=2397",
+          "details": null,
+          "icon_src_tail": [
+            "1795009705",
+            "monologo?filtericon=1"
+          ],
+          "restricted": false,
+          "dimmed": false
+        }
+      ]
+    }
+  ],
+  "course_id": 129,
+  "fetched_at": "2026-11-19T09:28:32+00:00"
+}

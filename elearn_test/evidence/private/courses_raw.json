@@ -1,0 +1,83 @@
+[
+  {
+    "id": 129,
+    "shortname": "Complexité et Résolution de Problème",
+    "fullname": "Complexité et Résolution de Problème",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=129"
+  },
+  {
+    "id": 126,
+    "shortname": "IASD-Bases de Données Avancées IASD",
+    "fullname": "IASD-Bases de Données Avancées",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=126"
+  },
+  {
+    "id": 124,
+    "shortname": "Ingénierie des Connaissances",
+    "fullname": "Ingénierie des Connaissances",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=124"
+  },
+  {
+    "id": 162,
+    "shortname": "IHM 2026-2027",
+    "fullname": "Interaction Homme-Machine",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 1799283600,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=162"
+  },
+  {
+    "id": 212,
+    "shortname": "LEAN STARTUP",
+    "fullname": "LEAN STARTUP",
+    "category": "Semestre 1",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=212"
+  },
+  {
+    "id": 125,
+    "shortname": "Machine Learning",
+    "fullname": "Machine Learning",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=125"
+  },
+  {
+    "id": 128,
+    "shortname": "Mathématiques Avancées pour la Science de Données",
+    "fullname": "Mathématiques Avancées pour la Science de Données",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=128"
+  },
+  {
+    "id": 60,
+    "shortname": "Réseaux avancés IASD",
+    "fullname": "Réseaux avancés",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=60"
+  },
+  {
+    "id": 127,
+    "shortname": "Software Engineering for Data Science",
+    "fullname": "Software Engineering for Data Science",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true,
+    "enddate": 0,
+    "viewurl": "https://elearn.esi-sba.dz/course/view.php?id=127"
+  }
+]

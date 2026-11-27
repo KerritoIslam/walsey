@@ -1,0 +1,24 @@
+{
+  "admin_ws_documentation": {
+    "final_path": "/admin/webservice/documentation.php",
+    "title": "Erreur | E-Learn ESI-SBA",
+    "http_ok_but_denied_text": true
+  },
+  "admin_ws_settings": {
+    "final_path": "/admin/settings.php",
+    "title": "Erreur | E-Learn ESI-SBA",
+    "http_ok_but_denied_text": false
+  },
+  "rest_without_token_while_logged_in": {
+    "status": 403,
+    "snippet": ""
+  },
+  "ajax_core_course_get_recent_courses": {
+    "ok": true,
+    "http": 200
+  },
+  "ajax_tool_mobile_get_public_config": {
+    "ok": true,
+    "http": 200
+  }
+}

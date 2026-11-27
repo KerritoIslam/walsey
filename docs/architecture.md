@@ -1,5 +1,9 @@
 # Package structure and dependencies
 
+For an end-to-end explanation of the layers and flows, start at
+[`how-it-works/README.md`](how-it-works/README.md). This document is the
+package/API reference.
+
 ## Packages
 
 ```
@@ -95,7 +99,10 @@ lib/src/
   queue/       write_queue.dart      serial writes, min-gap, timeout,
                block-after-timeout                                    [2, done]
   transport/   led_transport.dart    abstract write/notifications/close  [2, done]
-  scenes/      Scene, SceneValidator, SceneStore, in-memory + JSON stores [3]
+  scenes/      PLANNED ONLY — this directory does not exist yet.
+               Scene/SceneValidator/SceneStore are a future design; see
+               docs/planned/scenes.md. SaveSceneStep in walsey_voice_core is
+               recognized but has no store or executor.
 ```
 
 ### Implemented API (Stage 2, as built)
@@ -147,7 +154,7 @@ Design rules that follow from the research:
 
 | Package | Where | Why | Status |
 |---|---|---|---|
-| `bluetooth_low_energy ^6.2.1` | `walsey_led_ble`, `tools/ble_probe` | Android + Windows central role, writes + notifications | Android connection verified 2026-10-23; **Windows does not compile** with MSVC 14.51 (`/await` deprecation inside the plugin) |
+| `bluetooth_low_energy ^6.2.1` | `walsey_led_ble`, `tools/ble_probe` | Android + Windows central role, writes + notifications | Android connection verified 2026-10-23. Windows **compiles** with the app-side CMake workaround that removes `/await` from the plugin and builds it as C++20; Windows BLE has **not been run against a controller** |
 | `device_info_plus`, `permission_handler` | `walsey_led_ble` | Android SDK detection and runtime permission preflight | Analyzer/tests only; same permission flow that worked in the probe |
 | `test`, `lints` | core dev | unit tests, analysis | present |
 | `flutter_lints` | Flutter packages | analysis | present |

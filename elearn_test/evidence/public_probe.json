@@ -1,0 +1,157 @@
+{
+  "frontpage": {
+    "title": "Home | E-Learn ESI-SBA",
+    "cfg": {
+      "wwwroot": "https://elearn.esi-sba.dz",
+      "theme": "moove",
+      "language": "en",
+      "sessiontimeout": "28800",
+      "slasharguments": 1,
+      "themerev": "1795009705",
+      "jsrev": "1793870344",
+      "hasSesskey": true
+    },
+    "body_classes": "limitedwidth format-site course path-site chrome dir-ltr lang-en yui-skin-sam yui3-skin-sam elearn-esi-sba-dz pagelayout-frontpage course-1 context-2 notloggedin theme uses-drawers jsenabled",
+    "category_links": 30
+  },
+  "login_form": {
+    "formFound": true,
+    "action": "https://elearn.esi-sba.dz/login/index.php",
+    "method": "post",
+    "formId": "login",
+    "fields": [
+      {
+        "tag": "input",
+        "type": "hidden",
+        "name": "anchor",
+        "id": "anchor",
+        "autocomplete": null
+      },
+      {
+        "tag": "input",
+        "type": "hidden",
+        "name": "logintoken",
+        "id": null,
+        "autocomplete": null
+      },
+      {
+        "tag": "input",
+        "type": "text",
+        "name": "username",
+        "id": "username",
+        "autocomplete": "username"
+      },
+      {
+        "tag": "input",
+        "type": "password",
+        "name": "password",
+        "id": "password",
+        "autocomplete": "current-password"
+      },
+      {
+        "tag": "button",
+        "type": "button",
+        "name": null,
+        "id": null,
+        "autocomplete": null
+      },
+      {
+        "tag": "button",
+        "type": "submit",
+        "name": null,
+        "id": "loginbtn",
+        "autocomplete": null
+      }
+    ],
+    "captcha": false,
+    "guestLogin": true,
+    "idpButtons": [],
+    "signupLink": false,
+    "forgotLink": true,
+    "cfg": {
+      "theme": "moove",
+      "sessiontimeout": "28800"
+    }
+  },
+  "cookies_prelogin": [
+    {
+      "name": "MoodleSession",
+      "domain": "elearn.esi-sba.dz",
+      "path": "/",
+      "httpOnly": false,
+      "secure": true,
+      "sameSite": "Lax",
+      "session_cookie": true,
+      "expires_in_hours": null
+    },
+    {
+      "name": "_ga",
+      "domain": ".esi-sba.dz",
+      "path": "/",
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax",
+      "session_cookie": false,
+      "expires_in_hours": 9600.0
+    },
+    {
+      "name": "_ga_4T3W027DMD",
+      "domain": ".esi-sba.dz",
+      "path": "/",
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax",
+      "session_cookie": false,
+      "expires_in_hours": 9600.0
+    }
+  ],
+  "plugin_hints": [
+    "theme/moove"
+  ],
+  "probes": {
+    "upgrade_txt": {
+      "status": 404,
+      "content_type": "text/html",
+      "location": "",
+      "snippet": "<html> <head><title>404 Not Found</title></head> <body> <center><h1>404 Not Found</h1></center> <hr><center>nginx/1.24.0 (Ubuntu)</center> </body> </html> "
+    },
+    "ws_rest_server": {
+      "status": 403,
+      "content_type": "text/html; charset=utf-8",
+      "location": "",
+      "snippet": ""
+    },
+    "ws_site_info_no_token": {
+      "status": 403,
+      "content_type": "text/html; charset=utf-8",
+      "location": "",
+      "snippet": ""
+    },
+    "login_token_no_credentials": {
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "location": "",
+      "snippet": "{\"error\":\"Web services must be enabled in Advanced features.\",\"errorcode\":\"enablewsdescription\",\"stacktrace\":null,\"debuginfo\":null,\"reproductionlink\":null}"
+    },
+    "ws_documentation_anonymous": {
+      "status": 303,
+      "content_type": "text/html; charset=utf-8",
+      "location": "https://elearn.esi-sba.dz/login/index.php",
+      "snippet": "<!DOCTYPE html> <html lang=\"en\" xml:lang=\"en\"> <head> <meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /> <title>Redirect</title> <style> body { margin: 0; font-family: -apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"H"
+    },
+    "robots": {
+      "status": 404,
+      "content_type": "text/html;charset=UTF-8",
+      "location": "",
+      "snippet": "<!doctype html><html lang=\"en\"> <head> <meta charset=\"utf-8\"> <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> <title>404 Not Found</title> <style> body{margin:0;padding:30px;font:12px/1.5 Helvetica,Arial,Verdana,sans-se"
+    },
+    "public_mobile_config": {
+      "status": 200,
+      "error": false,
+      "release": null,
+      "version": null,
+      "typeoflogin": 1,
+      "mobile_ws_hint": "data returned"
+    }
+  }
+}

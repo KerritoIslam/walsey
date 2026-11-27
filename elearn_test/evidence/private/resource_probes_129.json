@@ -1,0 +1,58 @@
+[
+  {
+    "cmid": 2312,
+    "view_status": 303,
+    "redirect_path_pattern": "/pluginfile.php/<n>/mod_resource/content/<n>/Introduction-CPS.pdf",
+    "filename": "Introduction-CPS.pdf",
+    "extension": ".pdf",
+    "head_status": 200,
+    "content-type": "application/pdf",
+    "content-length": "761274",
+    "last-modified": "Sat, 08 Nov 2025 10:22:08 GMT",
+    "etag": "\"690f19d0-b9dba\"",
+    "content-disposition": "inline; filename=\"Introduction-CPS.pdf\"",
+    "cache-control": "private, max-age=21600, no-transform"
+  },
+  {
+    "cmid": 2314,
+    "view_status": 303,
+    "redirect_path_pattern": "/pluginfile.php/<n>/mod_resource/content/<n>/AlgorithmicComplexity.pdf",
+    "filename": "AlgorithmicComplexity.pdf",
+    "extension": ".pdf",
+    "head_status": 200,
+    "content-type": "application/pdf",
+    "content-length": "1646780",
+    "last-modified": "Sat, 06 Dec 2025 08:36:04 GMT",
+    "etag": "\"6933eaf4-1920bc\"",
+    "content-disposition": "inline; filename=\"AlgorithmicComplexity.pdf\"",
+    "cache-control": "private, max-age=21600, no-transform"
+  },
+  {
+    "cmid": 3109,
+    "view_status": 303,
+    "redirect_path_pattern": "/pluginfile.php/<n>/mod_resource/content/<n>/Worksheet-01-Algorithmic-Complexity.pdf",
+    "filename": "Worksheet-01-Algorithmic-Complexity.pdf",
+    "extension": ".pdf",
+    "head_status": 200,
+    "content-type": "application/pdf",
+    "content-length": "280330",
+    "last-modified": "Sat, 04 Oct 2025 14:44:18 GMT",
+    "etag": "\"68e132c2-4470a\"",
+    "content-disposition": "inline; filename=\"Worksheet-01-Algorithmic-Complexity.pdf\"",
+    "cache-control": "private, max-age=21600, no-transform"
+  },
+  {
+    "cmid": 3347,
+    "view_status": 303,
+    "redirect_path_pattern": "/pluginfile.php/<n>/mod_resource/content/<n>/Solution-TD-%28Algorithmic-complexity%29.pdf",
+    "filename": "Solution-TD-%28Algorithmic-complexity%29.pdf",
+    "extension": ".pdf",
+    "head_status": 200,
+    "content-type": "application/pdf",
+    "content-length": "500239",
+    "last-modified": "Wed, 17 Dec 2025 06:36:56 GMT",
+    "etag": "\"69424f88-7a20f\"",
+    "content-disposition": "inline; filename=\"Solution-TD-(Algorithmic-complexity).pdf\"",
+    "cache-control": "private, max-age=21600, no-transform"
+  }
+]

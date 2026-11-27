@@ -1,0 +1,56 @@
+[
+  {
+    "id": 129,
+    "label": "COURSE_001",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 126,
+    "label": "COURSE_002",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 124,
+    "label": "COURSE_003",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 162,
+    "label": "COURSE_004",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 212,
+    "label": "COURSE_005",
+    "category": "Semestre 1",
+    "visible": true
+  },
+  {
+    "id": 125,
+    "label": "COURSE_006",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 128,
+    "label": "COURSE_007",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 60,
+    "label": "COURSE_008",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  },
+  {
+    "id": 127,
+    "label": "COURSE_009",
+    "category": "Intelligence artificielle et sciences de données (IASD)",
+    "visible": true
+  }
+]

@@ -1,0 +1,428 @@
+{
+  "platform": "Moodle",
+  "_legend": "verified = observed on the real site | partial = some evidence | not_tested = no test run yet | unknown | failed | impossible. Running moodle_test.py updates this file.",
+  "_baseline_evidence": "Only public, logged-out pages were fetched (see evidence/public_fetch). No login-based test has been run.",
+  "architecture": {
+    "is_moodle": {
+      "status": "verified",
+      "evidence": "footer 'Powered by Moodle'; /login/index.php, /course/index.php?categoryid=N, /pluginfile.php URLs"
+    },
+    "theme": {
+      "status": "verified",
+      "value": "moove (third-party theme by Conecti.me)",
+      "evidence": "pluginfile.php/1/theme_moove/... and footer credit"
+    },
+    "standard_url_structure": {
+      "status": "partial",
+      "verified_paths": [
+        "/login/index.php",
+        "/course/index.php?categoryid=N",
+        "/user/contactsitesupport.php",
+        "/login/forgot_password.php"
+      ],
+      "not_tested": [
+        "/my/",
+        "/course/view.php",
+        "/mod/resource/view.php",
+        "/mod/assign/view.php"
+      ]
+    },
+    "moodle_version": {
+      "status": "unknown",
+      "tested_at": "2026-11-19T09:01:45+00:00",
+      "release": null,
+      "upgrade_txt_top_heading": null
+    },
+    "plugin_hints": {
+      "status": "partial",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "hints": [
+        "theme/moove"
+      ],
+      "note": "Heuristic from requested URLs; core vs third-party is not distinguished"
+    },
+    "languages": {
+      "status": "verified",
+      "value": [
+        "en",
+        "fr"
+      ]
+    }
+  },
+  "authentication": {
+    "login_form_standard": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "field_names": [
+        "anchor",
+        "logintoken",
+        "password",
+        "username"
+      ],
+      "form_action": "https://elearn.esi-sba.dz/login/index.php",
+      "form_method": "post"
+    },
+    "guest_login_button": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:01:44+00:00"
+    },
+    "lost_password_link": {
+      "status": "verified"
+    },
+    "captcha_on_login_page": {
+      "status": "verified_absent",
+      "tested_at": "2026-11-19T09:01:44+00:00"
+    },
+    "csrf_login_token_field": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "note": "hidden input named logintoken (Moodle >= 3.2 login CSRF token); value not recorded"
+    },
+    "two_factor": {
+      "status": "not_tested",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "note": "2FA can only be observed after a real login; see 'login' command"
+    },
+    "manual_login": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:03:53+00:00",
+      "landing_path_after_login": "/my/"
+    },
+    "alternative_auth_buttons": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "buttons": []
+    },
+    "post_login_two_factor_or_extra_step": {
+      "status": "partial",
+      "tested_at": "2026-11-19T09:03:53+00:00",
+      "note": "No extra step was needed during THIS manual login if you did not see one; confirm yourself"
+    }
+  },
+  "session": {
+    "cookie_attributes": {
+      "status": "not_tested"
+    },
+    "survives_browser_restart": {
+      "status": "not_tested"
+    },
+    "expiry_behavior": {
+      "status": "not_tested"
+    },
+    "logout_behavior": {
+      "status": "not_tested"
+    },
+    "cookie_attributes_prelogin": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:01:44+00:00",
+      "cookies": [
+        {
+          "name": "MoodleSession",
+          "domain": "elearn.esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": true,
+          "sameSite": "Lax",
+          "session_cookie": true,
+          "expires_in_hours": null
+        },
+        {
+          "name": "_ga",
+          "domain": ".esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": false,
+          "sameSite": "Lax",
+          "session_cookie": false,
+          "expires_in_hours": 9600.0
+        },
+        {
+          "name": "_ga_4T3W027DMD",
+          "domain": ".esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": false,
+          "sameSite": "Lax",
+          "session_cookie": false,
+          "expires_in_hours": 9600.0
+        }
+      ]
+    },
+    "server_side_session_timeout_seconds": {
+      "status": "partial",
+      "tested_at": "2026-11-19T09:03:53+00:00",
+      "value": "28800",
+      "note": "M.cfg.sessiontimeout is the configured idle timeout exposed to JS; real expiry still needs the 'session' log"
+    },
+    "cookie_attributes_postlogin": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:03:53+00:00",
+      "cookies": [
+        {
+          "name": "_ga",
+          "domain": ".esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": false,
+          "sameSite": "Lax",
+          "session_cookie": false,
+          "expires_in_hours": 9600.0
+        },
+        {
+          "name": "MoodleSession",
+          "domain": "elearn.esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": true,
+          "sameSite": "Lax",
+          "session_cookie": true,
+          "expires_in_hours": null
+        },
+        {
+          "name": "MOODLEID1_",
+          "domain": "elearn.esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": true,
+          "sameSite": "Lax",
+          "session_cookie": false,
+          "expires_in_hours": 1440.0
+        },
+        {
+          "name": "_ga_4T3W027DMD",
+          "domain": ".esi-sba.dz",
+          "path": "/",
+          "httpOnly": false,
+          "secure": false,
+          "sameSite": "Lax",
+          "session_cookie": false,
+          "expires_in_hours": 9600.0
+        }
+      ]
+    },
+    "survives_browser_restart_via_state": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:03:59+00:00",
+      "note": "Each run is a new browser process; verified only for the elapsed time in session_log.jsonl"
+    },
+    "survives_browser_restart_via_profile": {
+      "status": "failed",
+      "tested_at": "2026-11-19T09:04:03+00:00",
+      "note": "Each run is a new browser process; verified only for the elapsed time in session_log.jsonl"
+    }
+  },
+  "courses": {
+    "public_category_tree": {
+      "status": "verified",
+      "note": "front page lists categories; 112 courses and 2432 active users shown publicly"
+    },
+    "discovery_enrolled": {
+      "status": "not_tested"
+    },
+    "section_navigation": {
+      "status": "not_tested"
+    },
+    "enrolled_vs_public_distinction": {
+      "status": "not_tested"
+    },
+    "discovery_dom_my_courses": {
+      "status": "failed",
+      "tested_at": "2026-11-19T09:12:53+00:00",
+      "count": 0
+    },
+    "discovery_ajax_enrolled_all": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:12:53+00:00",
+      "detail": {
+        "ok": true,
+        "http": 200
+      },
+      "count": 9
+    },
+    "course_navigation": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:28:32+00:00",
+      "activity_counts": {
+        "forum": 1,
+        "label": 2,
+        "resource": 4,
+        "feedback": 1
+      }
+    },
+    "section_discovery": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:28:32+00:00",
+      "sections": 16,
+      "selectors": {
+        "li.section": 8,
+        "[data-for=section]": 16,
+        "li.activity": 8,
+        "[data-for=cmitem]": 8
+      },
+      "body_hints": [
+        "format-topics",
+        "path-course",
+        "path-course-view",
+        "pagelayout-course",
+        "theme",
+        "uses-drawers"
+      ]
+    }
+  },
+  "downloads": {
+    "pdf": {
+      "status": "not_tested"
+    },
+    "zip": {
+      "status": "not_tested"
+    },
+    "folder": {
+      "status": "not_tested"
+    },
+    "external_url": {
+      "status": "not_tested"
+    },
+    "direct_http_with_session": {
+      "status": "not_tested"
+    },
+    "playwright_download_event": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:31:51+00:00",
+      "suggested_filename_present": true,
+      "same_sha256_as_http": true
+    },
+    "resource_url_resolution_without_body": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:28:34+00:00",
+      "by_extension": {
+        ".pdf": {
+          "count": 4,
+          "head_ok": 4
+        }
+      }
+    },
+    "direct_http_download": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:31:49+00:00",
+      "http_status": 200,
+      "bytes": 761274,
+      "sha256": "3856100432970ea5113580208767f840280d8ca7219aa99645c0263de42514d4",
+      "content_type": "application/pdf",
+      "last_modified": "Sat, 08 Nov 2025 10:22:08 GMT",
+      "etag": "\"690f19d0-b9dba\"",
+      "content_disposition_present": true
+    },
+    "download_requires_authentication": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:31:49+00:00",
+      "anonymous_status": 303,
+      "anonymous_redirect_path": "/login/index.php"
+    },
+    "conditional_get_304_supported": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:31:49+00:00",
+      "http_status": 304
+    },
+    "duplicate_detection_by_sha256": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:31:51+00:00",
+      "duplicate_of_cmid": null,
+      "note": "manifest keyed by cmid; compare hash before re-downloading"
+    }
+  },
+  "materials": {
+    "new_material_detection": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:28:32+00:00",
+      "last_diff": {
+        "added": [],
+        "removed": [],
+        "changed": []
+      },
+      "note": "DOM inventory diff between two runs; no timestamps from Moodle itself"
+    }
+  },
+  "assignments": {
+    "discovery": {
+      "status": "partial",
+      "tested_at": "2026-11-19T09:22:38+00:00",
+      "note": "no assignment table (course may have none)"
+    },
+    "deadline_extraction": {
+      "status": "not_tested"
+    },
+    "submission_status": {
+      "status": "not_tested"
+    },
+    "upload_inspection": {
+      "status": "not_tested"
+    },
+    "actual_submission": {
+      "status": "not_tested",
+      "note": "never performed by the test suite"
+    },
+    "deadlines_via_calendar_ajax": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:12:53+00:00",
+      "detail": {
+        "ok": true,
+        "http": 200
+      },
+      "events_next_30_days": 5
+    }
+  },
+  "grades": {
+    "retrieval": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:22:45+00:00",
+      "table_shape": {
+        "heads": [
+          "Élément d’évaluation",
+          "Pondération calculée",
+          "Note",
+          "Valeurs possibles",
+          "Pourcentage",
+          "Feedback",
+          "Contribution au total du cours",
+          "Complexité et Résolution de Problème"
+        ],
+        "rows": 3,
+        "rows_with_numeric_grade_cell": 0
+      },
+      "note": "structure only; no grade values stored"
+    }
+  },
+  "web_services": {
+    "rest_endpoint_reachable": {
+      "status": "partial",
+      "tested_at": "2026-11-19T09:01:45+00:00",
+      "probe": {
+        "status": 403,
+        "content_type": "text/html; charset=utf-8",
+        "location": "",
+        "snippet": ""
+      },
+      "note": "Reachable != enabled for students; see 'webservices' command"
+    },
+    "enabled_for_students": {
+      "status": "unknown"
+    },
+    "token_for_student": {
+      "status": "not_tested",
+      "tested_at": "2026-11-19T09:04:22+00:00",
+      "note": "Needs your own credentials against /login/token.php - do this manually (see report); never scripted here"
+    },
+    "session_ajax_service_php": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:04:22+00:00",
+      "note": "/lib/ajax/service.php with page sesskey = what the Moodle web UI itself uses; only AJAX-enabled functions work"
+    },
+    "admin_documentation_for_student": {
+      "status": "verified",
+      "tested_at": "2026-11-19T09:04:22+00:00",
+      "final_path": "/admin/webservice/documentation.php",
+      "note": "expected to be denied for students"
+    }
+  },
+  "last_run": "2026-11-19T09:31:51+00:00"
+}

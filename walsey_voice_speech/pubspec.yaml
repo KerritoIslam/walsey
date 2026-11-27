@@ -21,6 +21,7 @@ dependencies:
   record: ^7.1.2
   walsey_voice_core:
     path: ../walsey_voice_core
+  sherpa_onnx: ^2.0.1
 
 dev_dependencies:
   flutter_test:

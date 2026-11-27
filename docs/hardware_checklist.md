@@ -1,6 +1,6 @@
 # Hardware test checklist
 
-Record every result (pass / fail / observed value) next to the item. Nothing in this project may be called "working on the controller" until the relevant row says pass.
+Record every result (pass / fail / observed value) next to the item. Nothing in this project may be called "working on the controller" until the relevant row says pass. The Windows-BLE and first-sign-off plan is [`planned/windows-ble-and-hardware.md`](planned/windows-ble-and-hardware.md).
 
 ## Before you start
 - [ ] Power the controller from a supply that matches its rating and the strip's voltage. Check V+/V− polarity before applying power. Don't hot-swap the LED output (GND/DAT/VCC) while powered.

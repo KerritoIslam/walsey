@@ -2,14 +2,16 @@
 
 Stage 2 adds offline speech recognition in front of the Stage 1 parser. Press
 the microphone, speak, press **Stop & recognize**, and the transcript is parsed
-exactly like typed text. It still **does not execute anything**: there is no
-BLE import, no LED command, no wake word and no cloud service.
+exactly like typed text. The **voice packages and the testbed** still do not
+execute anything: there is no BLE import, no LED command, no wake start and no
+cloud service. The main app (`apps/walsey`) separately executes recognized plans
+through its own `VoicePlanExecutor`; see the note at the end.
 
 | Stage | Scope | State |
 |---|---|---|
 | 1 | Text → intent → validated parameters; testing UI | implemented |
 | 2 | Push-to-talk speech recognition feeding the Stage 1 parser | **implemented now** |
-| 3 | Wake word, LED execution through `LedControlService`, platform actions | partially investigated: detectors implemented but disabled, LED execution lives in the main app, wake accuracy measured as not viable (`docs/wake_word.md`) |
+| 3 | Wake word, LED execution through `LedControlService`, platform actions | LED plan execution is implemented in the main app; wake detectors/pipeline are implemented but have no model/backend (Vosk measurement not viable, `docs/wake_word.md`); platform actions are not started |
 
 ## Decisions
 
@@ -350,9 +352,9 @@ No test needs a microphone, a model, a network connection or a native library:
   no execution control anywhere).
 
 Results recorded on 2026-11-04 (local toolchain, Flutter 3.47.2 / Dart 3.13.2).
-These are the implementation-time numbers; the current counts after the
-2026-11-06 recording fix and accuracy work are 154 / 213 / 21 / 128
-(`docs/voice_assistant_report.md` §7):
+These are implementation-time numbers, not the current counts. The current
+counts (re-run 2026-11-27) are in the root [`README.md`](../README.md):
+191 voice-core, 229 voice-speech, 21 testbed and 143 main-app tests.
 
 | Command | Result |
 |---|---|
@@ -400,8 +402,10 @@ the capture diagnostics and the engine comparison are in
   baseline is 0/36 positives (`docs/wake_word.md`). The main app additionally has
   a compile-verified Android microphone foreground-service shell that no shipped
   code path starts.
-- No command execution and no LED transport import; `executionStatus` remains
-  `notExecuted`.
+- The voice packages and the testbed have no command execution and no LED
+  transport import; `executionStatus` remains `notExecuted` there. Only the main
+  app executes a recognized plan, through `VoicePlanExecutor` over the existing
+  connection/control services. Typed input is never executed.
 - The Windows **testbed** build is verified (`flutter build windows --debug`
   passes). The LED app's Windows build now also passes after the app-side CMake
   workaround for MSVC 14.51's `/await` rejection (no pub-cache edit); Windows
@@ -469,10 +473,22 @@ For each platform, record actual results:
 
 Do not mark any LED/frame claim as verified here; Stage 2 sends no command.
 
-## Stage 3 (not implemented)
+## Stage 3 status
 
-Recommended next step only after this checklist passes on both platforms:
-map `VoiceColor`/`VoiceBrightness`/`VoiceEffect` into `walsey_led_core` value
-objects and call the existing `LedControlService` behind an explicit execution
-action. Wake word, relative brightness and "next effect" still need a
-trustworthy device state that the protocol cannot currently read.
+LED execution is **implemented in the main app**, not in the voice packages:
+`apps/walsey/lib/voice/voice_plan_executor.dart` maps validated plan steps onto
+the existing `LedConnectionService`/`LedControlService`, runs them in order,
+re-checks prerequisites and stops on the first failure. A BLE write is reported
+as a write, never as a confirmed LED change. Typed input is never executed.
+
+Still blocked or unstarted:
+
+- **Wake word**: the pipeline is implemented and opt-in wired, but no model or
+  ONNX scorer backend ships; the Vosk phonetic approach measured 0/36 positives.
+  The implementation plan is [`planned/onnx-wake-word.md`](planned/onnx-wake-word.md).
+- **Relative brightness / "next effect"**: these need a trustworthy current
+  value, and the protocol has no state read-back. They stay recognized but
+  unexecutable.
+- **Platform actions** (Windows/system/apps/audio): not started.
+- **Android runtime verification**: microphone capture, permissions, foreground
+  service and a real model install are still unexercised on a device.
